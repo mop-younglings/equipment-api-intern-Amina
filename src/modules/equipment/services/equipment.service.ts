@@ -1,10 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreateEquipmentDto } from './dto/create-equipment.dto';
-import { UpdateEquipmentDto } from './dto/update-equipment.dto';
-import {
-  Equipment,
-  EquipmentStatus,
-} from './entities/equipment.entity';
+import { CreateEquipmentDto } from '../dto/create-equipment.dto';
+import { UpdateEquipmentDto } from '../dto/update-equipment.dto';
+import { Equipment, EquipmentStatus } from '../entities/equipment.entity';
 
 @Injectable()
 export class EquipmentService {

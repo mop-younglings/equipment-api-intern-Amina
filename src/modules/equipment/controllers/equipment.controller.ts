@@ -19,10 +19,10 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
-import { CreateEquipmentDto } from './dto/create-equipment.dto';
-import { UpdateEquipmentDto } from './dto/update-equipment.dto';
-import { Equipment } from './entities/equipment.entity';
-import { EquipmentService } from './equipment.service';
+import { CreateEquipmentDto } from '../dto/create-equipment.dto';
+import { UpdateEquipmentDto } from '../dto/update-equipment.dto';
+import { Equipment } from '../entities/equipment.entity';
+import { EquipmentService } from '../services/equipment.service';
 
 @ApiTags('Equipment')
 @Controller('equipment')
@@ -47,7 +47,10 @@ export class EquipmentController {
 
   @Post()
   @ApiOperation({ summary: 'Create equipment' })
-  @ApiCreatedResponse({ description: 'Created equipment item', type: Equipment })
+  @ApiCreatedResponse({
+    description: 'Created equipment item',
+    type: Equipment,
+  })
   @ApiBadRequestResponse({ description: 'Validation failed' })
   create(@Body() createEquipmentDto: CreateEquipmentDto): Equipment {
     return this.equipmentService.create(createEquipmentDto);

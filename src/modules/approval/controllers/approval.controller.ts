@@ -1,5 +1,10 @@
 import { Controller, Get, Param, Patch } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import {
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 
 @ApiTags('Approvals')
 @Controller('approvals')
