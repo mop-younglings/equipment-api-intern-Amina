@@ -1,34 +1,30 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CreateEquipmentDto } from '../dto/create-equipment.dto';
 import { UpdateEquipmentDto } from '../dto/update-equipment.dto';
-import { Equipment, EquipmentStatus } from '../entities/equipment.entity';
+import { Equipment } from '../entities/equipment.entity';
+import { EquipmentStatus } from '../enums/equipment-status.enum';
 
 @Injectable()
 export class EquipmentService {
-  private equipment: Equipment[] = [
-    {
-      id: '1',
-      name: 'MacBook Pro 14"',
-      category: 'Computer',
-      description: 'M3, 16GB RAM',
-      status: EquipmentStatus.AVAILABLE,
-    },
-    {
-      id: '2',
-      name: 'Dell UltraSharp 27"',
-      category: 'Monitor',
-      status: EquipmentStatus.IN_USE,
-    },
-  ];
+  constructor(
+    @InjectRepository(Equipment)
+    private readonly equipmentRepository: Repository<Equipment>,
+  ) {}
 
-  private nextId = 3;
-
-  findAll(): Equipment[] {
-    return this.equipment;
+  findAll(): Promise<Equipment[]> {
+    return this.equipmentRepository.find({
+      relations: { assignedEmployee: true },
+      order: { name: 'ASC' },
+    });
   }
 
-  findOne(id: string): Equipment {
-    const item = this.equipment.find((equipment) => equipment.id === id);
+  async findOne(id: string): Promise<Equipment> {
+    const item = await this.equipmentRepository.findOne({
+      where: { id },
+      relations: { assignedEmployee: true },
+    });
 
     if (!item) {
       throw new NotFoundException(`Equipment with id "${id}" not found`);
@@ -37,42 +33,30 @@ export class EquipmentService {
     return item;
   }
 
-  create(createEquipmentDto: CreateEquipmentDto): Equipment {
-    const item: Equipment = {
-      id: String(this.nextId++),
+  async create(createEquipmentDto: CreateEquipmentDto): Promise<Equipment> {
+    const item = this.equipmentRepository.create({
       name: createEquipmentDto.name,
       category: createEquipmentDto.category,
       description: createEquipmentDto.description,
       status: createEquipmentDto.status ?? EquipmentStatus.AVAILABLE,
-    };
+    });
 
-    this.equipment.push(item);
-    return item;
+    return this.equipmentRepository.save(item);
   }
 
-  update(id: string, updateEquipmentDto: UpdateEquipmentDto): Equipment {
-    const index = this.equipment.findIndex((equipment) => equipment.id === id);
+  async update(
+    id: string,
+    updateEquipmentDto: UpdateEquipmentDto,
+  ): Promise<Equipment> {
+    const item = await this.findOne(id);
 
-    if (index === -1) {
-      throw new NotFoundException(`Equipment with id "${id}" not found`);
-    }
+    Object.assign(item, updateEquipmentDto);
 
-    const updated: Equipment = {
-      ...this.equipment[index],
-      ...updateEquipmentDto,
-    };
-
-    this.equipment[index] = updated;
-    return updated;
+    return this.equipmentRepository.save(item);
   }
 
-  remove(id: string): void {
-    const index = this.equipment.findIndex((equipment) => equipment.id === id);
-
-    if (index === -1) {
-      throw new NotFoundException(`Equipment with id "${id}" not found`);
-    }
-
-    this.equipment.splice(index, 1);
+  async remove(id: string): Promise<void> {
+    const item = await this.findOne(id);
+    await this.equipmentRepository.remove(item);
   }
 }

@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { EquipmentStatus } from '../entities/equipment.entity';
+import { EquipmentStatus } from '../enums/equipment-status.enum';
 
 export class CreateEquipmentDto {
   @ApiProperty({ example: 'MacBook Pro 14"' })

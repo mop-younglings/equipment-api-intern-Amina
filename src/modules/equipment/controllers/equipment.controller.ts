@@ -32,16 +32,19 @@ export class EquipmentController {
   @Get()
   @ApiOperation({ summary: 'List all equipment' })
   @ApiOkResponse({ description: 'List of equipment items', type: [Equipment] })
-  findAll(): Equipment[] {
+  findAll(): Promise<Equipment[]> {
     return this.equipmentService.findAll();
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get equipment by ID' })
-  @ApiParam({ name: 'id', example: '1' })
+  @ApiParam({
+    name: 'id',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
   @ApiOkResponse({ description: 'Equipment item', type: Equipment })
   @ApiNotFoundResponse({ description: 'Equipment not found' })
-  findOne(@Param('id') id: string): Equipment {
+  findOne(@Param('id') id: string): Promise<Equipment> {
     return this.equipmentService.findOne(id);
   }
 
@@ -52,30 +55,36 @@ export class EquipmentController {
     type: Equipment,
   })
   @ApiBadRequestResponse({ description: 'Validation failed' })
-  create(@Body() createEquipmentDto: CreateEquipmentDto): Equipment {
+  create(@Body() createEquipmentDto: CreateEquipmentDto): Promise<Equipment> {
     return this.equipmentService.create(createEquipmentDto);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update equipment by ID' })
-  @ApiParam({ name: 'id', example: '1' })
+  @ApiParam({
+    name: 'id',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
   @ApiOkResponse({ description: 'Updated equipment item', type: Equipment })
   @ApiBadRequestResponse({ description: 'Validation failed' })
   @ApiNotFoundResponse({ description: 'Equipment not found' })
   update(
     @Param('id') id: string,
     @Body() updateEquipmentDto: UpdateEquipmentDto,
-  ): Equipment {
+  ): Promise<Equipment> {
     return this.equipmentService.update(id, updateEquipmentDto);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete equipment by ID' })
-  @ApiParam({ name: 'id', example: '1' })
+  @ApiParam({
+    name: 'id',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
   @ApiNoContentResponse({ description: 'Equipment deleted' })
   @ApiNotFoundResponse({ description: 'Equipment not found' })
-  remove(@Param('id') id: string): void {
+  remove(@Param('id') id: string): Promise<void> {
     return this.equipmentService.remove(id);
   }
 }
