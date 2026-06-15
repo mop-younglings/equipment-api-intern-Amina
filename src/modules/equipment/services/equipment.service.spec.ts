@@ -20,6 +20,7 @@ describe('EquipmentService', () => {
     category: 'Computer',
     description: 'M3, 16GB RAM',
     status: EquipmentStatus.AVAILABLE,
+    value: 2499.99,
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
   };
@@ -109,6 +110,7 @@ describe('EquipmentService', () => {
         category: dto.category,
         description: undefined,
         status: EquipmentStatus.AVAILABLE,
+        value: 0,
       });
       expect(repository.save).toHaveBeenCalledWith(mockEquipment);
       expect(result).toEqual(mockEquipment);
@@ -137,6 +139,7 @@ describe('EquipmentService', () => {
         category: dto.category,
         description: dto.description,
         status: EquipmentStatus.IN_USE,
+        value: 0,
       });
       expect(result.status).toBe(EquipmentStatus.IN_USE);
     });

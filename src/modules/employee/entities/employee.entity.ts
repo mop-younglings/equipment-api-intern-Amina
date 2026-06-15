@@ -7,11 +7,14 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
+  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Equipment } from '../../equipment/entities/equipment.entity';
+import { Notification } from '../../notification/entities/notification.entity';
 import { EmployeeRole } from '../enums/employee-role.enum';
 
 @Entity('employees')
@@ -48,9 +51,18 @@ export class Employee {
   })
   role!: EmployeeRole;
 
+  @ApiPropertyOptional({ type: () => Employee })
+  @ManyToOne(() => Employee, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'manager_id' })
+  manager?: Employee;
+
   @ApiPropertyOptional({ type: () => Equipment, isArray: true })
   @OneToMany(() => Equipment, (equipment) => equipment.assignedEmployee)
   assignedEquipment?: Equipment[];
+
+  @ApiPropertyOptional({ type: () => Notification, isArray: true })
+  @OneToMany(() => Notification, (notification) => notification.recipient)
+  notifications?: Notification[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

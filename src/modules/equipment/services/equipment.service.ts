@@ -39,6 +39,7 @@ export class EquipmentService {
       category: createEquipmentDto.category,
       description: createEquipmentDto.description,
       status: createEquipmentDto.status ?? EquipmentStatus.AVAILABLE,
+      value: createEquipmentDto.value ?? 0,
     });
 
     return this.equipmentRepository.save(item);

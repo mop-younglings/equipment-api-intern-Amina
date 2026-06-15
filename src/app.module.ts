@@ -9,6 +9,7 @@ import { ApprovalModule } from './modules/approval/approval.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { EmployeeModule } from './modules/employee/employee.module';
 import { EquipmentModule } from './modules/equipment/equipment.module';
+import { NotificationModule } from './modules/notification/notification.module';
 import { RequestModule } from './modules/request/request.module';
 
 @Module({
@@ -41,6 +42,7 @@ import { RequestModule } from './modules/request/request.module';
     EquipmentModule,
     RequestModule,
     ApprovalModule,
+    NotificationModule,
   ],
   providers: [
     {

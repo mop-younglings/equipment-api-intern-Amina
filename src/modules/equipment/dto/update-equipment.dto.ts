@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { EquipmentStatus } from '../enums/equipment-status.enum';
 
 export class UpdateEquipmentDto {
@@ -25,4 +25,10 @@ export class UpdateEquipmentDto {
   @IsOptional()
   @IsEnum(EquipmentStatus)
   status?: EquipmentStatus;
+
+  @ApiPropertyOptional({ example: 2499.99 })
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  value?: number;
 }

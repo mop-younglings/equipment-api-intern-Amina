@@ -37,6 +37,14 @@ export class Equipment {
   })
   status!: EquipmentStatus;
 
+  @ApiProperty({
+    example: 2499.99,
+    description:
+      'Monetary value used to determine multi-level approval routing',
+  })
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  value!: number;
+
   @ApiPropertyOptional({ type: () => Employee })
   @ManyToOne(() => Employee, (employee) => employee.assignedEquipment, {
     nullable: true,
