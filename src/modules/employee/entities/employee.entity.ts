@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiHideProperty, ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   Column,
   CreateDateColumn,
@@ -8,6 +8,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { Equipment } from '../../equipment/entities/equipment.entity';
+import { EmployeeRole } from '../enums/employee-role.enum';
 
 @Entity('employees')
 export class Employee {
@@ -30,6 +31,18 @@ export class Employee {
   @ApiProperty({ example: 'Engineering' })
   @Column()
   department!: string;
+
+  @ApiHideProperty()
+  @Column({ select: false })
+  password!: string;
+
+  @ApiProperty({ enum: EmployeeRole, example: EmployeeRole.USER })
+  @Column({
+    type: 'enum',
+    enum: EmployeeRole,
+    default: EmployeeRole.USER,
+  })
+  role!: EmployeeRole;
 
   @ApiPropertyOptional({ type: () => Equipment, isArray: true })
   @OneToMany(() => Equipment, (equipment) => equipment.assignedEmployee)

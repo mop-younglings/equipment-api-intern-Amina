@@ -1,10 +1,45 @@
+import * as bcrypt from 'bcrypt';
 import { config } from 'dotenv';
-import { DataSource } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
+import { EmployeeRole } from '../../modules/employee/enums/employee-role.enum';
 import { Employee } from '../../modules/employee/entities/employee.entity';
 import { Equipment } from '../../modules/equipment/entities/equipment.entity';
 import { EquipmentStatus } from '../../modules/equipment/enums/equipment-status.enum';
 
 config();
+
+const ADMIN_EMAIL = 'admin@example.com';
+const ADMIN_PASSWORD = 'password123';
+const SALT_ROUNDS = 10;
+
+async function seedAdminUser(
+  employeeRepository: Repository<Employee>,
+): Promise<void> {
+  const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, SALT_ROUNDS);
+  const existing = await employeeRepository.findOne({
+    where: { email: ADMIN_EMAIL },
+  });
+
+  if (existing) {
+    existing.password = passwordHash;
+    existing.role = EmployeeRole.ADMIN;
+    await employeeRepository.save(existing);
+    console.log(`Admin user updated: ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`);
+    return;
+  }
+
+  const admin = employeeRepository.create({
+    firstName: 'Admin',
+    lastName: 'User',
+    email: ADMIN_EMAIL,
+    department: 'IT',
+    password: passwordHash,
+    role: EmployeeRole.ADMIN,
+  });
+
+  await employeeRepository.save(admin);
+  console.log(`Admin user created: ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`);
+}
 
 async function seed(): Promise<void> {
   const dataSource = new DataSource({
@@ -22,9 +57,13 @@ async function seed(): Promise<void> {
   const employeeRepository = dataSource.getRepository(Employee);
   const equipmentRepository = dataSource.getRepository(Equipment);
 
-  const existingEmployees = await employeeRepository.count();
-  if (existingEmployees > 0) {
-    console.log('Seed skipped: employees already exist.');
+  await seedAdminUser(employeeRepository);
+
+  const hasDemoData = await employeeRepository.existsBy({
+    email: 'jane.doe@example.com',
+  });
+  if (hasDemoData) {
+    console.log('Demo seed skipped: demo employees already exist.');
     await dataSource.destroy();
     return;
   }
@@ -34,6 +73,8 @@ async function seed(): Promise<void> {
     lastName: 'Doe',
     email: 'jane.doe@example.com',
     department: 'Engineering',
+    password: '',
+    role: EmployeeRole.USER,
   });
 
   const john = employeeRepository.create({
@@ -41,6 +82,8 @@ async function seed(): Promise<void> {
     lastName: 'Smith',
     email: 'john.smith@example.com',
     department: 'Design',
+    password: '',
+    role: EmployeeRole.USER,
   });
 
   await employeeRepository.save([jane, john]);
