@@ -7,6 +7,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
+import { AuthenticatedUser } from '../../../common/types/authenticated-user.type';
 import { EmployeeRole } from '../../employee/enums/employee-role.enum';
 import { Employee } from '../../employee/entities/employee.entity';
 import { LoginDto } from '../dto/login.dto';
@@ -59,7 +60,28 @@ export class AuthService {
 
     const saved = await this.employeeRepository.save(employee);
 
-    return this.employeeRepository.findOneOrFail({ where: { id: saved.id } });
+    return this.toPublicEmployee(saved);
+  }
+
+  async validateJwtPayload(payload: JwtPayload): Promise<AuthenticatedUser> {
+    const employee = await this.employeeRepository.findOne({
+      where: { id: payload.sub },
+    });
+
+    if (!employee) {
+      throw new UnauthorizedException('Invalid or expired token');
+    }
+
+    return {
+      id: employee.id,
+      email: employee.email,
+      role: employee.role,
+    };
+  }
+
+  private toPublicEmployee(employee: Employee): Omit<Employee, 'password'> {
+    const { password: _password, ...publicEmployee } = employee;
+    return publicEmployee;
   }
 
   async login(loginDto: LoginDto): Promise<AuthTokenResponse> {

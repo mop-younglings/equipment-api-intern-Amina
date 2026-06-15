@@ -45,3 +45,10 @@ lerna-debug.log*
 # temp
 .temp
 .tmp
+
+# husky
+.husky/_
+
+# env variants
+.env.*
+!.env.example
