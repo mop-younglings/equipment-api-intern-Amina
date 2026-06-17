@@ -1,0 +1,27 @@
+# Copy to terraform.tfvars and customize per environment.
+# Do not commit terraform.tfvars if it contains secrets.
+
+aws_region  = "us-east-1"
+environment = "dev"
+
+# vpc_cidr = "10.0.0.0/16"
+
+# db_password = "set-a-strong-password-or-leave-null-to-auto-generate"
+# jwt_secret  = "set-a-long-random-string-or-leave-null-to-auto-generate"
+
+db_instance_class = "db.t4g.micro"
+desired_count     = 1
+task_cpu          = 256
+task_memory       = 512
+
+# Point CORS at the ALB URL after first apply, e.g.:
+# cors_origin = "http://equipment-api-dev-alb-123456789.us-east-1.elb.amazonaws.com"
+
+run_migrations = true
+app_image_tag  = "latest"
+
+# enable_https          = true
+# acm_certificate_arn   = "arn:aws:acm:us-east-1:123456789012:certificate/..."
+
+# Local validation only — do not use for real AWS deployments:
+# use_localstack = true
