@@ -1,48 +1,31 @@
 import * as bcrypt from 'bcrypt';
 import { config } from 'dotenv';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { ApprovalStep } from '../../modules/approval/entities/approval-step.entity';
+import { ApprovalRole } from '../../modules/approval/enums/approval-role.enum';
 import { ApprovalStepStatus } from '../../modules/approval/enums/approval-step-status.enum';
+import { Department } from '../../modules/department/entities/department.entity';
+import { AccountStatus } from '../../modules/employee/enums/account-status.enum';
 import { EmployeeRole } from '../../modules/employee/enums/employee-role.enum';
 import { Employee } from '../../modules/employee/entities/employee.entity';
-import { Equipment } from '../../modules/equipment/entities/equipment.entity';
-import { EquipmentStatus } from '../../modules/equipment/enums/equipment-status.enum';
+import { EquipmentAsset } from '../../modules/equipment-asset/entities/equipment-asset.entity';
+import { EquipmentAssetStatus } from '../../modules/equipment-asset/enums/equipment-asset-status.enum';
+import { EquipmentAssignment } from '../../modules/equipment-assignment/entities/equipment-assignment.entity';
+import { EquipmentAssignmentStatus } from '../../modules/equipment-assignment/enums/equipment-assignment-status.enum';
+import { EquipmentCategory } from '../../modules/equipment-category/entities/equipment-category.entity';
+import { EquipmentModel } from '../../modules/equipment-model/entities/equipment-model.entity';
 import { Notification } from '../../modules/notification/entities/notification.entity';
 import { NotificationType } from '../../modules/notification/enums/notification-type.enum';
 import { EquipmentRequest } from '../../modules/request/entities/equipment-request.entity';
+import { RequestAlternative } from '../../modules/request/entities/request-alternative.entity';
+import { RequestAlternativeStatus } from '../../modules/request/enums/request-alternative-status.enum';
 import { RequestStatus } from '../../modules/request/enums/request-status.enum';
+import { RequestType } from '../../modules/request/enums/request-type.enum';
 
 config();
 
 const DEMO_PASSWORD = 'password123';
-const ADMIN_EMAIL = 'admin@example.com';
 const SALT_ROUNDS = 10;
-
-async function seedAdminUser(
-  employeeRepository: Repository<Employee>,
-): Promise<Employee> {
-  const passwordHash = await bcrypt.hash(DEMO_PASSWORD, SALT_ROUNDS);
-  const existing = await employeeRepository.findOne({
-    where: { email: ADMIN_EMAIL },
-  });
-
-  if (existing) {
-    existing.password = passwordHash;
-    existing.role = EmployeeRole.ADMIN;
-    return employeeRepository.save(existing);
-  }
-
-  return employeeRepository.save(
-    employeeRepository.create({
-      firstName: 'Admin',
-      lastName: 'User',
-      email: ADMIN_EMAIL,
-      department: 'IT',
-      password: passwordHash,
-      role: EmployeeRole.ADMIN,
-    }),
-  );
-}
 
 async function seed(): Promise<void> {
   const dataSource = new DataSource({
@@ -52,217 +35,317 @@ async function seed(): Promise<void> {
     username: process.env.DB_USERNAME ?? 'equipment',
     password: process.env.DB_PASSWORD ?? 'equipment',
     database: process.env.DB_NAME ?? 'equipment_api',
-    entities: [
-      Employee,
-      Equipment,
-      EquipmentRequest,
-      ApprovalStep,
-      Notification,
-    ],
+    entities: ['src/modules/**/*.entity.ts'],
   });
 
   await dataSource.initialize();
+  const passwordHash = await bcrypt.hash(DEMO_PASSWORD, SALT_ROUNDS);
 
-  const employeeRepository = dataSource.getRepository(Employee);
-  const equipmentRepository = dataSource.getRepository(Equipment);
-  const requestRepository = dataSource.getRepository(EquipmentRequest);
-  const approvalStepRepository = dataSource.getRepository(ApprovalStep);
-  const notificationRepository = dataSource.getRepository(Notification);
+  const employeeRepo = dataSource.getRepository(Employee);
+  const departmentRepo = dataSource.getRepository(Department);
+  const categoryRepo = dataSource.getRepository(EquipmentCategory);
+  const modelRepo = dataSource.getRepository(EquipmentModel);
+  const assetRepo = dataSource.getRepository(EquipmentAsset);
+  const requestRepo = dataSource.getRepository(EquipmentRequest);
+  const stepRepo = dataSource.getRepository(ApprovalStep);
+  const notificationRepo = dataSource.getRepository(Notification);
+  const assignmentRepo = dataSource.getRepository(EquipmentAssignment);
+  const alternativeRepo = dataSource.getRepository(RequestAlternative);
 
-  const admin = await seedAdminUser(employeeRepository);
-  console.log(`Admin user ready: ${ADMIN_EMAIL} / ${DEMO_PASSWORD}`);
-
-  const hasDemoData = await employeeRepository.existsBy({
-    email: 'bob.manager@example.com',
-  });
-  if (hasDemoData) {
+  if (await employeeRepo.existsBy({ email: 'bob.manager@example.com' })) {
     console.log('Demo seed skipped: demo data already exists.');
     await dataSource.destroy();
     return;
   }
 
-  const passwordHash = await bcrypt.hash(DEMO_PASSWORD, SALT_ROUNDS);
+  await employeeRepo.save(
+    employeeRepo.create({
+      firstName: 'Admin',
+      lastName: 'User',
+      email: 'admin@example.com',
+      password: passwordHash,
+      role: EmployeeRole.ADMIN,
+      accountStatus: AccountStatus.ACTIVE,
+    }),
+  );
 
-  const bob = await employeeRepository.save(
-    employeeRepository.create({
+  const procurementManager = await employeeRepo.save(
+    employeeRepo.create({
+      firstName: 'Pat',
+      lastName: 'Procurement',
+      email: 'pat.procurement@example.com',
+      password: passwordHash,
+      role: EmployeeRole.PROCUREMENT_MANAGER,
+      accountStatus: AccountStatus.ACTIVE,
+    }),
+  );
+
+  const bob = await employeeRepo.save(
+    employeeRepo.create({
       firstName: 'Bob',
       lastName: 'Manager',
       email: 'bob.manager@example.com',
-      department: 'Engineering',
       password: passwordHash,
-      role: EmployeeRole.USER,
+      role: EmployeeRole.DIRECT_MANAGER,
+      accountStatus: AccountStatus.ACTIVE,
     }),
   );
 
-  const jane = await employeeRepository.save(
-    employeeRepository.create({
+  const engineering = await departmentRepo.save(
+    departmentRepo.create({
+      name: 'Engineering',
+      directManager: bob,
+    }),
+  );
+
+  const design = await departmentRepo.save(
+    departmentRepo.create({
+      name: 'Design',
+      directManager: bob,
+    }),
+  );
+
+  const operations = await departmentRepo.save(
+    departmentRepo.create({ name: 'Operations' }),
+  );
+
+  const jane = await employeeRepo.save(
+    employeeRepo.create({
       firstName: 'Jane',
       lastName: 'Doe',
       email: 'jane.doe@example.com',
-      department: 'Engineering',
       password: passwordHash,
-      role: EmployeeRole.USER,
-      manager: bob,
+      role: EmployeeRole.EMPLOYEE,
+      accountStatus: AccountStatus.ACTIVE,
+      department: engineering,
     }),
   );
 
-  const john = await employeeRepository.save(
-    employeeRepository.create({
+  const john = await employeeRepo.save(
+    employeeRepo.create({
       firstName: 'John',
       lastName: 'Smith',
       email: 'john.smith@example.com',
-      department: 'Design',
       password: passwordHash,
-      role: EmployeeRole.USER,
-      manager: bob,
+      role: EmployeeRole.EMPLOYEE,
+      accountStatus: AccountStatus.ACTIVE,
+      department: design,
     }),
   );
 
-  const macbook = await equipmentRepository.save(
-    equipmentRepository.create({
+  const categories = await categoryRepo.save([
+    categoryRepo.create({ name: 'Laptop', description: 'Portable computers' }),
+    categoryRepo.create({ name: 'Monitor', description: 'Displays' }),
+    categoryRepo.create({ name: 'Phone', description: 'Mobile phones' }),
+    categoryRepo.create({ name: 'Tablet', description: 'Tablets' }),
+    categoryRepo.create({ name: 'Furniture', description: 'Office furniture' }),
+  ]);
+
+  const [laptopCat, monitorCat, phoneCat, tabletCat, furnitureCat] = categories;
+
+  const models = await modelRepo.save([
+    modelRepo.create({
       name: 'MacBook Pro 14"',
-      category: 'Computer',
-      description: 'M3, 16GB RAM',
-      status: EquipmentStatus.IN_USE,
-      value: 2499.99,
-      assignedEmployee: jane,
+      category: laptopCat,
+      defaultValue: 2499.99,
+      lowStockThreshold: 1,
     }),
-  );
-
-  const monitor = await equipmentRepository.save(
-    equipmentRepository.create({
+    modelRepo.create({
       name: 'Dell UltraSharp 27"',
-      category: 'Monitor',
-      status: EquipmentStatus.IN_USE,
-      value: 449.99,
-      assignedEmployee: john,
+      category: monitorCat,
+      defaultValue: 449.99,
+      lowStockThreshold: 2,
     }),
-  );
-
-  const iphone = await equipmentRepository.save(
-    equipmentRepository.create({
+    modelRepo.create({
       name: 'iPhone 15',
-      category: 'Phone',
-      status: EquipmentStatus.AVAILABLE,
-      value: 799.99,
+      category: phoneCat,
+      defaultValue: 799.99,
+      lowStockThreshold: 2,
     }),
-  );
-
-  const ipad = await equipmentRepository.save(
-    equipmentRepository.create({
+    modelRepo.create({
       name: 'iPad Pro 12.9"',
-      category: 'Tablet',
-      description: 'M2, 256GB — high-value item',
-      status: EquipmentStatus.AVAILABLE,
-      value: 1299.99,
+      category: tabletCat,
+      defaultValue: 1299.99,
+      lowStockThreshold: 1,
     }),
-  );
+    modelRepo.create({
+      name: 'Standing Desk',
+      category: furnitureCat,
+      defaultValue: 599.99,
+      lowStockThreshold: 1,
+    }),
+  ]);
 
-  // Standard request: John wants iPhone (single manager approval, pending)
-  const phoneRequest = await requestRepository.save(
-    requestRepository.create({
+  const [macbookModel, monitorModel, iphoneModel, ipadModel] = models;
+
+  const now = new Date();
+  const assets = await assetRepo.save([
+    assetRepo.create({
+      equipmentModel: macbookModel,
+      assetTag: 'LT-001',
+      serialNumber: 'MBP-001',
+      status: EquipmentAssetStatus.IN_USE,
+      assignedEmployee: jane,
+      assignedAt: now,
+      expectedReturnDate: '2026-12-31',
+    }),
+    assetRepo.create({
+      equipmentModel: monitorModel,
+      assetTag: 'MON-001',
+      status: EquipmentAssetStatus.IN_USE,
+      assignedEmployee: john,
+      assignedAt: now,
+    }),
+    assetRepo.create({
+      equipmentModel: iphoneModel,
+      assetTag: 'PH-001',
+      status: EquipmentAssetStatus.AVAILABLE,
+    }),
+    assetRepo.create({
+      equipmentModel: iphoneModel,
+      assetTag: 'PH-002',
+      status: EquipmentAssetStatus.MAINTENANCE,
+    }),
+    assetRepo.create({
+      equipmentModel: ipadModel,
+      assetTag: 'TB-001',
+      status: EquipmentAssetStatus.AVAILABLE,
+    }),
+    assetRepo.create({
+      equipmentModel: models[4],
+      assetTag: 'FURN-001',
+      status: EquipmentAssetStatus.RETIRED,
+      retiredAt: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000),
+      retiredBy: procurementManager,
+    }),
+  ]);
+
+  await assignmentRepo.save([
+    assignmentRepo.create({
+      equipmentAsset: assets[0],
+      employee: jane,
+      assignedBy: procurementManager,
+      assignedAt: now,
+      expectedReturnDate: '2026-12-31',
+      status: EquipmentAssignmentStatus.ACTIVE,
+    }),
+    assignmentRepo.create({
+      equipmentAsset: assets[1],
+      employee: john,
+      assignedBy: procurementManager,
+      assignedAt: now,
+      status: EquipmentAssignmentStatus.ACTIVE,
+    }),
+  ]);
+
+  const loanRequest = await requestRepo.save(
+    requestRepo.create({
       requester: john,
-      equipment: iphone,
-      reason: 'Need company phone for client site visits',
-      status: RequestStatus.PENDING,
-      equipmentValue: Number(iphone.value),
-      requiredApprovalLevels: 1,
+      requestType: RequestType.LOAN,
+      equipmentModel: iphoneModel,
+      category: phoneCat,
+      quantity: 1,
+      startDate: '2026-07-01',
+      endDate: '2026-12-31',
+      purpose: 'Need company phone for client site visits',
+      status: RequestStatus.PENDING_MANAGER_APPROVAL,
     }),
   );
 
-  await approvalStepRepository.save(
-    approvalStepRepository.create({
-      request: phoneRequest,
+  const loanManagerStep = await stepRepo.save(
+    stepRepo.create({
+      request: loanRequest,
       level: 1,
       approver: bob,
+      approverRole: ApprovalRole.DIRECT_MANAGER,
       status: ApprovalStepStatus.PENDING,
     }),
   );
 
-  const phoneApprovalStep = await approvalStepRepository.findOneOrFail({
-    where: { request: { id: phoneRequest.id }, level: 1 },
-    relations: { approver: true },
-  });
-
-  // High-value request: Jane wants iPad (manager approved, awaiting admin)
-  const tabletRequest = await requestRepository.save(
-    requestRepository.create({
+  const procurementRequest = await requestRepo.save(
+    requestRepo.create({
       requester: jane,
-      equipment: ipad,
-      reason: 'Need tablet for design reviews on-site',
-      status: RequestStatus.PARTIALLY_APPROVED,
-      equipmentValue: Number(ipad.value),
-      requiredApprovalLevels: 2,
+      requestType: RequestType.PROCUREMENT,
+      requestedItemName: 'Ergonomic standing desk',
+      category: furnitureCat,
+      quantity: 1,
+      startDate: '2026-08-01',
+      endDate: '2027-08-01',
+      purpose: 'Need adjustable desk for home office setup',
+      status: RequestStatus.PENDING_PROCUREMENT_APPROVAL,
     }),
   );
 
-  await approvalStepRepository.save([
-    approvalStepRepository.create({
-      request: tabletRequest,
+  await stepRepo.save([
+    stepRepo.create({
+      request: procurementRequest,
       level: 1,
       approver: bob,
+      approverRole: ApprovalRole.DIRECT_MANAGER,
       status: ApprovalStepStatus.APPROVED,
-      comment: 'Approved — valid business need',
-      actedAt: new Date(),
+      comment: 'Approved business need',
+      actedAt: now,
     }),
-    approvalStepRepository.create({
-      request: tabletRequest,
+    stepRepo.create({
+      request: procurementRequest,
       level: 2,
-      approver: admin,
+      approver: procurementManager,
+      approverRole: ApprovalRole.PROCUREMENT_MANAGER,
       status: ApprovalStepStatus.PENDING,
     }),
   ]);
 
-  const tabletAdminStep = await approvalStepRepository.findOneOrFail({
-    where: { request: { id: tabletRequest.id }, level: 2 },
-    relations: { approver: true },
+  const procurementStep = await stepRepo.findOneOrFail({
+    where: { request: { id: procurementRequest.id }, level: 2 },
   });
 
-  await notificationRepository.save([
-    notificationRepository.create({
+  await alternativeRepo.save(
+    alternativeRepo.create({
+      request: procurementRequest,
+      equipmentModel: ipadModel,
+      suggestedBy: procurementManager,
+      message: 'Consider iPad Pro as an alternative mobile workstation',
+      status: RequestAlternativeStatus.SUGGESTED,
+    }),
+  );
+
+  await notificationRepo.save([
+    notificationRepo.create({
       recipient: bob,
       type: NotificationType.APPROVAL_REQUIRED,
-      title: `Approval required: ${iphone.name}`,
-      message: `${john.firstName} ${john.lastName} requested ${iphone.name} and needs your approval.`,
-      request: phoneRequest,
-      approvalStep: phoneApprovalStep,
-      isRead: false,
+      title: 'Approval required: iPhone 15',
+      message: 'John Smith submitted a loan request for iPhone 15.',
+      request: loanRequest,
+      approvalStep: loanManagerStep,
     }),
-    notificationRepository.create({
-      recipient: admin,
+    notificationRepo.create({
+      recipient: procurementManager,
       type: NotificationType.APPROVAL_REQUIRED,
-      title: `Approval required: ${ipad.name}`,
-      message: `${jane.firstName} ${jane.lastName} requested ${ipad.name} and needs your approval.`,
-      request: tabletRequest,
-      approvalStep: tabletAdminStep,
-      isRead: false,
+      title: 'Approval required: Ergonomic standing desk',
+      message: 'Jane Doe procurement request awaits review.',
+      request: procurementRequest,
+      approvalStep: procurementStep,
     }),
-    notificationRepository.create({
+    notificationRepo.create({
       recipient: jane,
-      type: NotificationType.REQUEST_UPDATE,
-      title: `Request update: ${ipad.name}`,
-      message: `Your request for ${ipad.name} was approved at level 1 and is awaiting further approval.`,
-      request: tabletRequest,
-      isRead: true,
-      readAt: new Date(),
+      type: NotificationType.ALTERNATIVE_SUGGESTED,
+      title: 'Alternative suggested for your request',
+      message: 'Procurement suggested iPad Pro 12.9" as an alternative.',
+      request: procurementRequest,
     }),
   ]);
 
-  console.log('Demo seed completed:');
-  console.log(`  Users: admin, ${bob.email}, ${jane.email}, ${john.email}`);
-  console.log(`  Password for all demo users: ${DEMO_PASSWORD}`);
+  console.log('Seed completed successfully.');
+  console.log(`Password for all users: ${DEMO_PASSWORD}`);
   console.log(
-    `  Equipment: ${macbook.name}, ${monitor.name}, ${iphone.name}, ${ipad.name}`,
+    'Users: admin@example.com, pat.procurement@example.com, bob.manager@example.com, jane.doe@example.com, john.smith@example.com',
   );
-  console.log('  Pending approvals:');
-  console.log(`    - Bob: iPhone request from John (level 1)`);
   console.log(
-    `    - Admin: iPad request from Jane (level 2, manager already approved)`,
+    `Departments: ${engineering.name}, ${design.name}, ${operations.name}`,
   );
-  console.log('  Notifications:');
-  console.log(`    - Bob: unread approval required for iPhone request`);
-  console.log(`    - Admin: unread approval required for iPad request`);
-  console.log(`    - Jane: read update on iPad request progress`);
+  console.log(
+    `Categories: ${categories.length}, Models: ${models.length}, Assets: ${assets.length}`,
+  );
 
   await dataSource.destroy();
 }
