@@ -12,7 +12,7 @@ describe('NotificationController', () => {
   const user = {
     id: 'user-1',
     email: 'bob@example.com',
-    role: EmployeeRole.USER,
+    role: EmployeeRole.EMPLOYEE,
   };
 
   const mockNotification = {
