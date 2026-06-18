@@ -5,11 +5,18 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import authConfig from './config/auth.config';
 import databaseConfig from './config/database.config';
+import { CommonModule } from './common/common.module';
+import { AdminModule } from './modules/admin/admin.module';
 import { ApprovalModule } from './modules/approval/approval.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { DepartmentModule } from './modules/department/department.module';
 import { EmployeeModule } from './modules/employee/employee.module';
-import { EquipmentModule } from './modules/equipment/equipment.module';
+import { EquipmentAssetModule } from './modules/equipment-asset/equipment-asset.module';
+import { EquipmentAssignmentModule } from './modules/equipment-assignment/equipment-assignment.module';
+import { EquipmentCategoryModule } from './modules/equipment-category/equipment-category.module';
+import { EquipmentModelModule } from './modules/equipment-model/equipment-model.module';
 import { NotificationModule } from './modules/notification/notification.module';
+import { ProcurementModule } from './modules/procurement/procurement.module';
 import { RequestModule } from './modules/request/request.module';
 
 @Module({
@@ -37,12 +44,19 @@ import { RequestModule } from './modules/request/request.module';
         synchronize: false,
       }),
     }),
+    CommonModule,
     AuthModule,
     EmployeeModule,
-    EquipmentModule,
+    DepartmentModule,
+    EquipmentCategoryModule,
+    EquipmentModelModule,
+    EquipmentAssetModule,
+    EquipmentAssignmentModule,
     RequestModule,
     ApprovalModule,
+    ProcurementModule,
     NotificationModule,
+    AdminModule,
   ],
   providers: [
     {
