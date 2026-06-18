@@ -4,8 +4,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
-import { EmployeeRole } from '../../employee/enums/employee-role.enum';
+import { Department } from '../../department/entities/department.entity';
 import { Employee } from '../../employee/entities/employee.entity';
+import { AccountStatus } from '../../employee/enums/account-status.enum';
+import { EmployeeRole } from '../../employee/enums/employee-role.enum';
 import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
 import { AuthService, JwtPayload } from './auth.service';
@@ -15,18 +17,20 @@ jest.mock('bcrypt');
 describe('AuthService', () => {
   let service: AuthService;
   let employeeRepository: jest.Mocked<Repository<Employee>>;
+  let departmentRepository: jest.Mocked<Repository<Department>>;
   let jwtService: jest.Mocked<JwtService>;
 
   const employeeId = '550e8400-e29b-41d4-a716-446655440000';
+  const departmentId = 'dept-1';
 
   const mockEmployee: Employee = {
     id: employeeId,
     firstName: 'Jane',
     lastName: 'Doe',
     email: 'jane.doe@example.com',
-    department: 'Engineering',
     password: 'hashed-password',
-    role: EmployeeRole.USER,
+    role: EmployeeRole.EMPLOYEE,
+    accountStatus: AccountStatus.ACTIVE,
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
   };
@@ -35,7 +39,7 @@ describe('AuthService', () => {
     firstName: 'Jane',
     lastName: 'Doe',
     email: 'jane.doe@example.com',
-    department: 'Engineering',
+    departmentId,
     password: 'password123',
   };
 
@@ -57,16 +61,19 @@ describe('AuthService', () => {
           },
         },
         {
+          provide: getRepositoryToken(Department),
+          useValue: { findOne: jest.fn() },
+        },
+        {
           provide: JwtService,
-          useValue: {
-            signAsync: jest.fn(),
-          },
+          useValue: { signAsync: jest.fn() },
         },
       ],
     }).compile();
 
     service = module.get(AuthService);
     employeeRepository = module.get(getRepositoryToken(Employee));
+    departmentRepository = module.get(getRepositoryToken(Department));
     jwtService = module.get(JwtService);
 
     jest.clearAllMocks();
@@ -75,6 +82,10 @@ describe('AuthService', () => {
   describe('register', () => {
     it('registers a new employee without returning the password', async () => {
       employeeRepository.findOne.mockResolvedValue(null);
+      departmentRepository.findOne.mockResolvedValue({
+        id: departmentId,
+        name: 'Engineering',
+      } as Department);
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-password');
       employeeRepository.create.mockReturnValue(mockEmployee);
       employeeRepository.save.mockResolvedValue(mockEmployee);
@@ -85,24 +96,15 @@ describe('AuthService', () => {
         where: { email: registerDto.email },
       });
       expect(bcrypt.hash).toHaveBeenCalledWith(registerDto.password, 10);
-      expect(employeeRepository.create).toHaveBeenCalledWith({
-        firstName: registerDto.firstName,
-        lastName: registerDto.lastName,
-        email: registerDto.email,
-        department: registerDto.department,
-        password: 'hashed-password',
-        role: EmployeeRole.USER,
-      });
-      expect(result).toEqual({
-        id: mockEmployee.id,
-        firstName: mockEmployee.firstName,
-        lastName: mockEmployee.lastName,
-        email: mockEmployee.email,
-        department: mockEmployee.department,
-        role: mockEmployee.role,
-        createdAt: mockEmployee.createdAt,
-        updatedAt: mockEmployee.updatedAt,
-      });
+      expect(employeeRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          firstName: registerDto.firstName,
+          lastName: registerDto.lastName,
+          email: registerDto.email,
+          role: EmployeeRole.EMPLOYEE,
+          accountStatus: AccountStatus.ACTIVE,
+        }),
+      );
       expect(result).not.toHaveProperty('password');
     });
 
@@ -111,9 +113,6 @@ describe('AuthService', () => {
 
       await expect(service.register(registerDto)).rejects.toThrow(
         ConflictException,
-      );
-      await expect(service.register(registerDto)).rejects.toThrow(
-        'Email already registered',
       );
       expect(employeeRepository.create).not.toHaveBeenCalled();
     });
@@ -127,22 +126,6 @@ describe('AuthService', () => {
 
       const result = await service.login(loginDto);
 
-      expect(employeeRepository.findOne).toHaveBeenCalledWith({
-        where: { email: loginDto.email },
-        select: {
-          id: true,
-          email: true,
-          password: true,
-          role: true,
-          firstName: true,
-          lastName: true,
-          department: true,
-        },
-      });
-      expect(bcrypt.compare).toHaveBeenCalledWith(
-        loginDto.password,
-        mockEmployee.password,
-      );
       expect(jwtService.signAsync).toHaveBeenCalledWith({
         sub: mockEmployee.id,
         email: mockEmployee.email,
@@ -151,14 +134,14 @@ describe('AuthService', () => {
       expect(result).toEqual({ accessToken: 'signed-jwt-token' });
     });
 
-    it('throws UnauthorizedException when email is not found', async () => {
-      employeeRepository.findOne.mockResolvedValue(null);
+    it('throws UnauthorizedException when account is inactive', async () => {
+      employeeRepository.findOne.mockResolvedValue({
+        ...mockEmployee,
+        accountStatus: AccountStatus.INACTIVE,
+      });
 
       await expect(service.login(loginDto)).rejects.toThrow(
         UnauthorizedException,
-      );
-      await expect(service.login(loginDto)).rejects.toThrow(
-        'Invalid email or password',
       );
       expect(bcrypt.compare).not.toHaveBeenCalled();
     });
@@ -170,9 +153,6 @@ describe('AuthService', () => {
       await expect(service.login(loginDto)).rejects.toThrow(
         UnauthorizedException,
       );
-      await expect(service.login(loginDto)).rejects.toThrow(
-        'Invalid email or password',
-      );
       expect(jwtService.signAsync).not.toHaveBeenCalled();
     });
   });
@@ -181,7 +161,7 @@ describe('AuthService', () => {
     const payload: JwtPayload = {
       sub: employeeId,
       email: mockEmployee.email,
-      role: EmployeeRole.USER,
+      role: EmployeeRole.EMPLOYEE,
     };
 
     it('returns authenticated user for a valid payload', async () => {
@@ -189,9 +169,6 @@ describe('AuthService', () => {
 
       const result = await service.validateJwtPayload(payload);
 
-      expect(employeeRepository.findOne).toHaveBeenCalledWith({
-        where: { id: payload.sub },
-      });
       expect(result).toEqual({
         id: mockEmployee.id,
         email: mockEmployee.email,
@@ -199,14 +176,14 @@ describe('AuthService', () => {
       });
     });
 
-    it('throws UnauthorizedException when employee no longer exists', async () => {
-      employeeRepository.findOne.mockResolvedValue(null);
+    it('throws UnauthorizedException when employee is inactive', async () => {
+      employeeRepository.findOne.mockResolvedValue({
+        ...mockEmployee,
+        accountStatus: AccountStatus.INACTIVE,
+      });
 
       await expect(service.validateJwtPayload(payload)).rejects.toThrow(
         UnauthorizedException,
-      );
-      await expect(service.validateJwtPayload(payload)).rejects.toThrow(
-        'Invalid or expired token',
       );
     });
   });

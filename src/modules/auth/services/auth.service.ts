@@ -8,8 +8,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
 import { AuthenticatedUser } from '../../../common/types/authenticated-user.type';
-import { EmployeeRole } from '../../employee/enums/employee-role.enum';
+import { Department } from '../../department/entities/department.entity';
 import { Employee } from '../../employee/entities/employee.entity';
+import { AccountStatus } from '../../employee/enums/account-status.enum';
+import { EmployeeRole } from '../../employee/enums/employee-role.enum';
 import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
 
@@ -30,6 +32,8 @@ export class AuthService {
   constructor(
     @InjectRepository(Employee)
     private readonly employeeRepository: Repository<Employee>,
+    @InjectRepository(Department)
+    private readonly departmentRepository: Repository<Department>,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -44,6 +48,14 @@ export class AuthService {
       throw new ConflictException('Email already registered');
     }
 
+    let department: Department | undefined;
+    if (registerDto.departmentId) {
+      department =
+        (await this.departmentRepository.findOne({
+          where: { id: registerDto.departmentId },
+        })) ?? undefined;
+    }
+
     const passwordHash = await bcrypt.hash(
       registerDto.password,
       this.saltRounds,
@@ -53,13 +65,13 @@ export class AuthService {
       firstName: registerDto.firstName,
       lastName: registerDto.lastName,
       email: registerDto.email,
-      department: registerDto.department,
       password: passwordHash,
-      role: EmployeeRole.USER,
+      role: EmployeeRole.EMPLOYEE,
+      accountStatus: AccountStatus.ACTIVE,
+      department,
     });
 
     const saved = await this.employeeRepository.save(employee);
-
     return this.toPublicEmployee(saved);
   }
 
@@ -68,7 +80,7 @@ export class AuthService {
       where: { id: payload.sub },
     });
 
-    if (!employee) {
+    if (!employee || employee.accountStatus !== AccountStatus.ACTIVE) {
       throw new UnauthorizedException('Invalid or expired token');
     }
 
@@ -77,6 +89,17 @@ export class AuthService {
       email: employee.email,
       role: employee.role,
     };
+  }
+
+  async getProfile(userId: string) {
+    const employee = await this.employeeRepository.findOne({
+      where: { id: userId },
+      relations: { department: { directManager: true } },
+    });
+    if (!employee) {
+      throw new UnauthorizedException('User not found');
+    }
+    return this.toPublicEmployee(employee);
   }
 
   private toPublicEmployee(employee: Employee): Omit<Employee, 'password'> {
@@ -92,13 +115,11 @@ export class AuthService {
         email: true,
         password: true,
         role: true,
-        firstName: true,
-        lastName: true,
-        department: true,
+        accountStatus: true,
       },
     });
 
-    if (!employee) {
+    if (!employee || employee.accountStatus !== AccountStatus.ACTIVE) {
       throw new UnauthorizedException('Invalid email or password');
     }
 

@@ -1,52 +1,31 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
-import {
-  ApiBadRequestResponse,
-  ApiConflictResponse,
-  ApiCreatedResponse,
-  ApiOkResponse,
-  ApiOperation,
-  ApiTags,
-  ApiUnauthorizedResponse,
-} from '@nestjs/swagger';
-import { Employee } from '../../employee/entities/employee.entity';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../../../common/types/authenticated-user.type';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
-import { AuthService, AuthTokenResponse } from '../services/auth.service';
+import { AuthService } from '../services/auth.service';
 
-@ApiTags('Auth')
+@ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  @ApiOperation({ summary: 'Register a new employee account' })
-  @ApiCreatedResponse({ description: 'Registered employee', type: Employee })
-  @ApiBadRequestResponse({ description: 'Validation failed' })
-  @ApiConflictResponse({ description: 'Email already registered' })
-  register(
-    @Body() registerDto: RegisterDto,
-  ): Promise<Omit<Employee, 'password'>> {
+  register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
   }
 
   @Post('login')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Authenticate user' })
-  @ApiOkResponse({
-    description: 'JWT access token',
-    schema: {
-      type: 'object',
-      properties: {
-        accessToken: {
-          type: 'string',
-          example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-        },
-      },
-    },
-  })
-  @ApiBadRequestResponse({ description: 'Validation failed' })
-  @ApiUnauthorizedResponse({ description: 'Invalid email or password' })
-  login(@Body() loginDto: LoginDto): Promise<AuthTokenResponse> {
+  login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  me(@CurrentUser() user: AuthenticatedUser) {
+    return this.authService.getProfile(user.id);
   }
 }
