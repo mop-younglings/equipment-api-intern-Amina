@@ -5,7 +5,6 @@ export enum NotificationType {
   REQUEST_CANCELLED = 'request_cancelled',
   REQUEST_UPDATE = 'request_update',
   PROCUREMENT_APPROVED = 'procurement_approved',
-  ALTERNATIVE_SUGGESTED = 'alternative_suggested',
   EQUIPMENT_ASSIGNED = 'equipment_assigned',
   EQUIPMENT_RETURN_REQUESTED = 'equipment_return_requested',
   EQUIPMENT_RETURNED = 'equipment_returned',

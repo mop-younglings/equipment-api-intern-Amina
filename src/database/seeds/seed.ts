@@ -17,8 +17,6 @@ import { EquipmentModel } from '../../modules/equipment-model/entities/equipment
 import { Notification } from '../../modules/notification/entities/notification.entity';
 import { NotificationType } from '../../modules/notification/enums/notification-type.enum';
 import { EquipmentRequest } from '../../modules/request/entities/equipment-request.entity';
-import { RequestAlternative } from '../../modules/request/entities/request-alternative.entity';
-import { RequestAlternativeStatus } from '../../modules/request/enums/request-alternative-status.enum';
 import { RequestStatus } from '../../modules/request/enums/request-status.enum';
 import { RequestType } from '../../modules/request/enums/request-type.enum';
 
@@ -50,7 +48,6 @@ async function seed(): Promise<void> {
   const stepRepo = dataSource.getRepository(ApprovalStep);
   const notificationRepo = dataSource.getRepository(Notification);
   const assignmentRepo = dataSource.getRepository(EquipmentAssignment);
-  const alternativeRepo = dataSource.getRepository(RequestAlternative);
 
   if (await employeeRepo.existsBy({ email: 'bob.manager@example.com' })) {
     console.log('Demo seed skipped: demo data already exists.');
@@ -299,16 +296,6 @@ async function seed(): Promise<void> {
     where: { request: { id: procurementRequest.id }, level: 2 },
   });
 
-  await alternativeRepo.save(
-    alternativeRepo.create({
-      request: procurementRequest,
-      equipmentModel: ipadModel,
-      suggestedBy: procurementManager,
-      message: 'Consider iPad Pro as an alternative mobile workstation',
-      status: RequestAlternativeStatus.SUGGESTED,
-    }),
-  );
-
   await notificationRepo.save([
     notificationRepo.create({
       recipient: bob,
@@ -325,13 +312,6 @@ async function seed(): Promise<void> {
       message: 'Jane Doe procurement request awaits review.',
       request: procurementRequest,
       approvalStep: procurementStep,
-    }),
-    notificationRepo.create({
-      recipient: jane,
-      type: NotificationType.ALTERNATIVE_SUGGESTED,
-      title: 'Alternative suggested for your request',
-      message: 'Procurement suggested iPad Pro 12.9" as an alternative.',
-      request: procurementRequest,
     }),
   ]);
 

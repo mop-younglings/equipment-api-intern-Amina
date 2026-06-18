@@ -16,7 +16,6 @@ import { EquipmentCategory } from '../../equipment-category/entities/equipment-c
 import { EquipmentModel } from '../../equipment-model/entities/equipment-model.entity';
 import { RequestStatus } from '../enums/request-status.enum';
 import { RequestType } from '../enums/request-type.enum';
-import { RequestAlternative } from './request-alternative.entity';
 
 @Entity('equipment_requests')
 export class EquipmentRequest {
@@ -86,10 +85,6 @@ export class EquipmentRequest {
   @ApiPropertyOptional({ type: () => ApprovalStep, isArray: true })
   @OneToMany(() => ApprovalStep, (step) => step.request)
   approvalSteps?: ApprovalStep[];
-
-  @ApiPropertyOptional({ type: () => RequestAlternative, isArray: true })
-  @OneToMany(() => RequestAlternative, (alt) => alt.request)
-  alternatives?: RequestAlternative[];
 
   @ApiPropertyOptional({ type: () => EquipmentAssignment, isArray: true })
   @OneToMany(() => EquipmentAssignment, (assignment) => assignment.request)

@@ -231,15 +231,6 @@ describe('NotificationService', () => {
       );
     });
 
-    it('notifyAlternativeSuggested', async () => {
-      await service.notifyAlternativeSuggested(requester, request, 'iPad');
-      expect(repository.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: NotificationType.ALTERNATIVE_SUGGESTED,
-        }),
-      );
-    });
-
     it('notifyEquipmentReturnRequested', async () => {
       await service.notifyEquipmentReturnRequested(
         requester,

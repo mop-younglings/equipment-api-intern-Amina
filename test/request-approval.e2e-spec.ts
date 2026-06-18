@@ -326,27 +326,6 @@ describe('Equipment workflow (e2e)', () => {
     expect(requestResponse.body.rejectedReason).toBe('No stock available');
   });
 
-  it('suggests an alternative model for a request', async () => {
-    if (!dbAvailable) return;
-
-    const employeeToken = await login(fixtures.employee.email);
-    const createResponse = await createLoanRequest(employeeToken);
-
-    const procurementToken = await login(fixtures.procurementManager.email);
-
-    const altResponse = await request(app.getHttpServer())
-      .post(`/requests/${createResponse.body.id}/alternatives`)
-      .set('Authorization', `Bearer ${procurementToken}`)
-      .send({
-        equipmentModelId: fixtures.laptopModel.id,
-        message: 'Consider this model instead',
-      })
-      .expect(201);
-
-    expect(altResponse.body.status).toBe('suggested');
-    expect(altResponse.body.message).toBe('Consider this model instead');
-  });
-
   it('handles equipment return request and completion', async () => {
     if (!dbAvailable) return;
 

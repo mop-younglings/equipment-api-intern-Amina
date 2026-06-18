@@ -48,7 +48,6 @@ export class RequestService {
         equipmentModel: { category: true },
         category: true,
         approvalSteps: { approver: true },
-        alternatives: { equipmentModel: true, suggestedBy: true },
       },
       order: { createdAt: 'DESC', approvalSteps: { level: 'ASC' } },
     });
@@ -65,7 +64,6 @@ export class RequestService {
         equipmentModel: { category: true },
         category: true,
         approvalSteps: { approver: true },
-        alternatives: { equipmentModel: true, suggestedBy: true },
         assignments: { equipmentAsset: { equipmentModel: true } },
       },
       order: { approvalSteps: { level: 'ASC' } },
@@ -93,7 +91,6 @@ export class RequestService {
         comment: step.comment,
         actedAt: step.actedAt,
       })),
-      alternatives: request.alternatives ?? [],
       assignments: request.assignments ?? [],
     };
   }

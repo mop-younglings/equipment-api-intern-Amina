@@ -438,7 +438,6 @@ describe('RequestService', () => {
             status: ApprovalStepStatus.PENDING,
           },
         ],
-        alternatives: [],
         assignments: [],
       } as EquipmentRequest;
       requestRepository.findOne.mockResolvedValue(request);

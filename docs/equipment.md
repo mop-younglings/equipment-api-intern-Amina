@@ -31,7 +31,6 @@ Employee requests an item not in inventory. After manager and procurement approv
 - **equipment_assignments** — Assignment and return history
 - **equipment_requests** — Loan/procurement requests with workflow status
 - **approval_steps** — Manager and procurement approval records
-- **request_alternatives** — Procurement manager suggestions
 - **notifications** — Workflow event notifications
 
 ## Business Rules

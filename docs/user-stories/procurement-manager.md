@@ -2,7 +2,7 @@
 
 ## User story
 
-As a procurement manager, I want to review requests that have been approved by direct managers, fulfill loan requests by assigning available assets, approve procurement requests for external acquisition, and manage the full equipment inventory. I inherit all direct manager and employee capabilities. I need to check asset availability before fulfilling loans, reject requests with a required reason, and suggest alternative available models when external procurement may not be necessary. After approving a procurement request, I acquire the item outside the app, then add or edit models and assets in inventory and assign them to the requester to complete fulfillment. I must be able to manage categories, models, and physical assets; assign equipment directly; mark assets for maintenance; retire assets with history; and hard-delete only unused assets without assignment history.
+As a procurement manager, I want to review requests that have been approved by direct managers, fulfill loan requests by assigning available assets, approve procurement requests for external acquisition, and manage the full equipment inventory. I inherit all direct manager and employee capabilities. I need to check asset availability before fulfilling loans and reject requests with a required reason. After approving a procurement request, I acquire the item outside the app, then add or edit models and assets in inventory and assign them to the requester to complete fulfillment. I must be able to manage categories, models, and physical assets; assign equipment directly; mark assets for maintenance; retire assets with history; and hard-delete only unused assets without assignment history.
 
 ## Acceptance criteria
 
@@ -12,7 +12,6 @@ As a procurement manager, I want to review requests that have been approved by d
 - Approving a procurement request sets request to `procurement_approved` and notifies the employee
 - Assigning an asset with `requestId` for a `procurement_approved` request sets request to `fulfilled` and notifies the employee
 - Rejecting at procurement level requires a `comment` and notifies the employee
-- `POST /requests/{id}/alternatives` creates a suggested alternative and notifies the requester
 - `GET /inventory` and `GET /inventory/stats` provide asset listing and low-stock summary
 - Procurement manager can CRUD equipment categories, models, and assets
 - `DELETE /equipment-assets/{id}` succeeds only for unused assets without assignment history
@@ -26,7 +25,6 @@ As a procurement manager, I want to review requests that have been approved by d
 | ------ | ----------------------------------------- | ------------------ | ----------------------------------------------- |
 | GET    | `/procurement/approvals`                  | JWT (procurement+) | Requests awaiting procurement review            |
 | GET    | `/procurement/requests/{id}/availability` | JWT (procurement+) | Available assets for request model              |
-| POST   | `/requests/{id}/alternatives`             | JWT (procurement+) | Suggest alternative equipment model             |
 | GET    | `/equipment/models/{id}/similar`          | JWT (procurement+) | Find similar available models                   |
 | GET    | `/inventory`                              | JWT (procurement+) | List all equipment assets                       |
 | GET    | `/inventory/stats`                        | JWT (procurement+) | Inventory statistics and low-stock alerts       |
@@ -44,15 +42,6 @@ As a procurement manager, I want to review requests that have been approved by d
 | DELETE | `/equipment-assets/{id}`                  | JWT (procurement+) | Hard-delete eligible asset                      |
 
 Also inherits all [direct manager](./direct-manager.md) and [employee](./employee.md) endpoints.
-
-### POST `/requests/{id}/alternatives` — request body
-
-```json
-{
-  "equipmentModelId": "550e8400-e29b-41d4-a716-446655440000",
-  "message": "iPad Pro is available and may suit your needs"
-}
-```
 
 ### POST `/equipment-assets` — request body
 

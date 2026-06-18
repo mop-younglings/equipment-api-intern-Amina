@@ -187,23 +187,6 @@ export class NotificationService {
     });
   }
 
-  notifyAlternativeSuggested(
-    recipient: Employee,
-    request: EquipmentRequest,
-    modelName: string,
-    message?: string,
-  ): Promise<Notification> {
-    return this.createNotification({
-      recipient,
-      type: NotificationType.ALTERNATIVE_SUGGESTED,
-      title: `Alternative suggested for your request`,
-      message:
-        message ??
-        `Procurement suggested ${modelName} as an alternative to your request.`,
-      request,
-    });
-  }
-
   notifyEquipmentAssigned(
     recipient: Employee,
     request: EquipmentRequest,

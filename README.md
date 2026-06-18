@@ -9,7 +9,7 @@ A NestJS REST API for company equipment inventory, loan/procurement requests, mu
 - **Department-based routing** — Requests go to the direct manager of the requester's department
 - **Inventory model** — Categories, models, and physical assets with status tracking
 - **Assignments & returns** — Full assignment history; managers can request equipment returns
-- **Procurement workflow** — Purchase orders, availability checks, alternative suggestions
+- **Procurement workflow** — Availability checks and procurement approvals
 - **Notifications** — Created for approvals, rejections, assignments, returns, and updates
 - **JWT authentication** — Register, login, profile (`GET /auth/me`)
 - **OpenAPI documentation** — Swagger UI at `/api`
@@ -61,7 +61,7 @@ API: `http://localhost:3000` · Swagger: `http://localhost:3000/api`
 | `jane.doe@example.com`        | Employee (Engineering)                |
 | `john.smith@example.com`      | Employee (Design)                     |
 
-**After seed:** John has a pending iPhone loan request; Jane has a procurement request awaiting Pat with an iPad alternative suggested.
+**After seed:** John has a pending iPhone loan request; Jane has a procurement request awaiting Pat.
 
 ## Approval Workflow
 
@@ -98,7 +98,7 @@ src/modules/
 ├── equipment-assignment/  # Assignments, returns, manager views
 ├── request/               # Loan/procurement requests
 ├── approval/              # Manager and procurement approvals
-├── procurement/           # Alternatives, availability checks
+├── procurement/           # Availability checks
 ├── notification/          # In-app notifications
 └── admin/                 # User and department administration
 ```
@@ -155,7 +155,6 @@ Authenticated endpoints require `Authorization: Bearer <token>` unless noted.
 | --------------------- | ---------------------------------------- | ----------------------------------------- |
 | GET                   | `/procurement/approvals`                 | Requests awaiting procurement             |
 | GET                   | `/procurement/requests/:id/availability` | Check asset availability                  |
-| POST                  | `/requests/:id/alternatives`             | Suggest alternative model                 |
 | GET                   | `/inventory`                             | Full asset inventory                      |
 | GET                   | `/inventory/stats`                       | Inventory statistics                      |
 | GET/POST              | `/equipment-categories`                  | Manage categories                         |
@@ -190,7 +189,7 @@ npm run test:cov      # Coverage report
 npm run test:e2e      # Integration/e2e (requires PostgreSQL)
 ```
 
-E2E tests cover loan/procurement workflows, cancellations, rejections, alternatives, returns, asset delete/retire rules, admin actions, RBAC, and notifications.
+E2E tests cover loan/procurement workflows, cancellations, rejections, returns, asset delete/retire rules, admin actions, RBAC, and notifications.
 
 ## Environment Variables
 

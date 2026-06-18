@@ -27,7 +27,6 @@ export async function cleanDatabase(dataSource: DataSource): Promise<void> {
   await dataSource.query(`
     TRUNCATE TABLE
       "notifications",
-      "request_alternatives",
       "equipment_assignments",
       "approval_steps",
       "equipment_requests",
