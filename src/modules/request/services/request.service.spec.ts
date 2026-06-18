@@ -13,6 +13,7 @@ import { ApprovalRole } from '../../approval/enums/approval-role.enum';
 import { ApprovalStepStatus } from '../../approval/enums/approval-step-status.enum';
 import { Department } from '../../department/entities/department.entity';
 import { Employee } from '../../employee/entities/employee.entity';
+import { AccountStatus } from '../../employee/enums/account-status.enum';
 import { EmployeeRole } from '../../employee/enums/employee-role.enum';
 import { EquipmentCategory } from '../../equipment-category/entities/equipment-category.entity';
 import { EquipmentModel } from '../../equipment-model/entities/equipment-model.entity';
@@ -52,6 +53,7 @@ describe('RequestService', () => {
     email: 'bob@example.com',
     password: 'hash',
     role: EmployeeRole.DIRECT_MANAGER,
+    accountStatus: AccountStatus.ACTIVE,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -71,6 +73,7 @@ describe('RequestService', () => {
     email: 'jane@example.com',
     password: 'hash',
     role: EmployeeRole.EMPLOYEE,
+    accountStatus: AccountStatus.ACTIVE,
     department,
     createdAt: new Date(),
     updatedAt: new Date(),
