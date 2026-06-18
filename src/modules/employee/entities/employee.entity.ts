@@ -13,13 +13,16 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Equipment } from '../../equipment/entities/equipment.entity';
+import { Department } from '../../department/entities/department.entity';
+import { EquipmentAsset } from '../../equipment-asset/entities/equipment-asset.entity';
+import { EquipmentAssignment } from '../../equipment-assignment/entities/equipment-assignment.entity';
 import { Notification } from '../../notification/entities/notification.entity';
+import { AccountStatus } from '../enums/account-status.enum';
 import { EmployeeRole } from '../enums/employee-role.enum';
 
 @Entity('employees')
 export class Employee {
-  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
+  @ApiProperty()
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
@@ -35,30 +38,38 @@ export class Employee {
   @Column({ unique: true })
   email!: string;
 
-  @ApiProperty({ example: 'Engineering' })
-  @Column()
-  department!: string;
-
   @ApiHideProperty()
   @Column({ select: false })
   password!: string;
 
-  @ApiProperty({ enum: EmployeeRole, example: EmployeeRole.USER })
-  @Column({
-    type: 'enum',
-    enum: EmployeeRole,
-    default: EmployeeRole.USER,
-  })
+  @ApiProperty({ enum: EmployeeRole, example: EmployeeRole.EMPLOYEE })
+  @Column({ type: 'enum', enum: EmployeeRole, default: EmployeeRole.EMPLOYEE })
   role!: EmployeeRole;
 
-  @ApiPropertyOptional({ type: () => Employee })
-  @ManyToOne(() => Employee, { nullable: true, onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'manager_id' })
-  manager?: Employee;
+  @ApiProperty({ enum: AccountStatus, example: AccountStatus.ACTIVE })
+  @Column({
+    name: 'account_status',
+    type: 'enum',
+    enum: AccountStatus,
+    default: AccountStatus.ACTIVE,
+  })
+  accountStatus!: AccountStatus;
 
-  @ApiPropertyOptional({ type: () => Equipment, isArray: true })
-  @OneToMany(() => Equipment, (equipment) => equipment.assignedEmployee)
-  assignedEquipment?: Equipment[];
+  @ApiPropertyOptional({ type: () => Department })
+  @ManyToOne(() => Department, (department) => department.employees, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'department_id' })
+  department?: Department;
+
+  @ApiPropertyOptional({ type: () => EquipmentAsset, isArray: true })
+  @OneToMany(() => EquipmentAsset, (asset) => asset.assignedEmployee)
+  assignedAssets?: EquipmentAsset[];
+
+  @ApiPropertyOptional({ type: () => EquipmentAssignment, isArray: true })
+  @OneToMany(() => EquipmentAssignment, (assignment) => assignment.employee)
+  assignments?: EquipmentAssignment[];
 
   @ApiPropertyOptional({ type: () => Notification, isArray: true })
   @OneToMany(() => Notification, (notification) => notification.recipient)

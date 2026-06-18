@@ -2,9 +2,9 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CreateEmployeeDto } from '../dto/create-employee.dto';
-import { UpdateEmployeeDto } from '../dto/update-employee.dto';
+import { Department } from '../../department/entities/department.entity';
 import { Employee } from '../entities/employee.entity';
+import { AccountStatus } from '../enums/account-status.enum';
 import { EmployeeRole } from '../enums/employee-role.enum';
 import { EmployeeService } from './employee.service';
 
@@ -19,9 +19,10 @@ describe('EmployeeService', () => {
     firstName: 'Jane',
     lastName: 'Doe',
     email: 'jane.doe@example.com',
-    department: 'Engineering',
     password: 'hash',
-    role: EmployeeRole.USER,
+    role: EmployeeRole.EMPLOYEE,
+    accountStatus: AccountStatus.ACTIVE,
+    department: { id: 'dept-1', name: 'Engineering' } as Department,
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
   };
@@ -35,9 +36,6 @@ describe('EmployeeService', () => {
           useValue: {
             find: jest.fn(),
             findOne: jest.fn(),
-            create: jest.fn(),
-            save: jest.fn(),
-            remove: jest.fn(),
           },
         },
       ],
@@ -48,14 +46,14 @@ describe('EmployeeService', () => {
   });
 
   describe('findAll', () => {
-    it('returns employees ordered by name', async () => {
+    it('returns employees with department and assets', async () => {
       repository.find.mockResolvedValue([mockEmployee]);
 
       const result = await service.findAll();
 
       expect(result).toEqual([mockEmployee]);
       expect(repository.find).toHaveBeenCalledWith({
-        relations: { assignedEquipment: true },
+        relations: { department: true, assignedAssets: true },
         order: { lastName: 'ASC', firstName: 'ASC' },
       });
     });
@@ -68,6 +66,13 @@ describe('EmployeeService', () => {
       const result = await service.findOne(employeeId);
 
       expect(result).toEqual(mockEmployee);
+      expect(repository.findOne).toHaveBeenCalledWith({
+        where: { id: employeeId },
+        relations: {
+          department: true,
+          assignedAssets: { equipmentModel: true },
+        },
+      });
     });
 
     it('throws NotFoundException when employee does not exist', async () => {
@@ -76,50 +81,6 @@ describe('EmployeeService', () => {
       await expect(service.findOne(employeeId)).rejects.toThrow(
         NotFoundException,
       );
-    });
-  });
-
-  describe('create', () => {
-    it('creates and saves employee', async () => {
-      const dto: CreateEmployeeDto = {
-        firstName: 'Jane',
-        lastName: 'Doe',
-        email: 'jane.doe@example.com',
-        department: 'Engineering',
-      };
-
-      repository.create.mockReturnValue(mockEmployee);
-      repository.save.mockResolvedValue(mockEmployee);
-
-      const result = await service.create(dto);
-
-      expect(repository.create).toHaveBeenCalledWith(dto);
-      expect(result).toEqual(mockEmployee);
-    });
-  });
-
-  describe('update', () => {
-    it('updates employee fields', async () => {
-      const updateDto: UpdateEmployeeDto = { department: 'Design' };
-      const updated = { ...mockEmployee, department: 'Design' };
-
-      repository.findOne.mockResolvedValue({ ...mockEmployee });
-      repository.save.mockResolvedValue(updated);
-
-      const result = await service.update(employeeId, updateDto);
-
-      expect(result.department).toBe('Design');
-    });
-  });
-
-  describe('remove', () => {
-    it('removes employee when found', async () => {
-      repository.findOne.mockResolvedValue(mockEmployee);
-      repository.remove.mockResolvedValue(mockEmployee);
-
-      await service.remove(employeeId);
-
-      expect(repository.remove).toHaveBeenCalledWith(mockEmployee);
     });
   });
 });
