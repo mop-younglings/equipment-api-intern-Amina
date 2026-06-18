@@ -11,6 +11,7 @@ import { AuthenticatedUser } from '../../../common/types/authenticated-user.type
 import { ApprovalStep } from '../../approval/entities/approval-step.entity';
 import { ApprovalRole } from '../../approval/enums/approval-role.enum';
 import { ApprovalStepStatus } from '../../approval/enums/approval-step-status.enum';
+import { ApprovalWorkflowService } from '../../approval/services/approval-workflow.service';
 import { Department } from '../../department/entities/department.entity';
 import { Employee } from '../../employee/entities/employee.entity';
 import { AccountStatus } from '../../employee/enums/account-status.enum';
@@ -101,6 +102,7 @@ describe('RequestService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RequestService,
+        ApprovalWorkflowService,
         {
           provide: getRepositoryToken(EquipmentRequest),
           useValue: {

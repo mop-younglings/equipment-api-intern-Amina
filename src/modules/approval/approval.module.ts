@@ -8,6 +8,7 @@ import { EquipmentAssignment } from '../equipment-assignment/entities/equipment-
 import { EquipmentRequest } from '../request/entities/equipment-request.entity';
 import { ApprovalController } from './controllers/approval.controller';
 import { ApprovalStep } from './entities/approval-step.entity';
+import { ApprovalWorkflowService } from './services/approval-workflow.service';
 import { ApprovalService } from './services/approval.service';
 
 @Module({
@@ -23,7 +24,7 @@ import { ApprovalService } from './services/approval.service';
     NotificationModule,
   ],
   controllers: [ApprovalController],
-  providers: [ApprovalService],
-  exports: [ApprovalService],
+  providers: [ApprovalService, ApprovalWorkflowService],
+  exports: [ApprovalService, ApprovalWorkflowService],
 })
 export class ApprovalModule {}

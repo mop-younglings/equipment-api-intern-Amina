@@ -8,9 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { AccessControlService } from '../../../common/services/access-control.service';
 import { AuthenticatedUser } from '../../../common/types/authenticated-user.type';
-import { ApprovalStep } from '../../approval/entities/approval-step.entity';
-import { ApprovalRole } from '../../approval/enums/approval-role.enum';
-import { ApprovalStepStatus } from '../../approval/enums/approval-step-status.enum';
+import { ApprovalWorkflowService } from '../../approval/services/approval-workflow.service';
 import { Employee } from '../../employee/entities/employee.entity';
 import { EquipmentCategory } from '../../equipment-category/entities/equipment-category.entity';
 import { EquipmentModel } from '../../equipment-model/entities/equipment-model.entity';
@@ -38,6 +36,7 @@ export class RequestService {
     private readonly dataSource: DataSource,
     private readonly notificationService: NotificationService,
     private readonly accessControl: AccessControlService,
+    private readonly approvalWorkflowService: ApprovalWorkflowService,
   ) {}
 
   findMyRequests(userId: string): Promise<EquipmentRequest[]> {
@@ -99,102 +98,29 @@ export class RequestService {
     createRequestDto: CreateRequestDto,
     user: AuthenticatedUser,
   ): Promise<EquipmentRequest> {
-    const requester = await this.employeeRepository.findOne({
-      where: { id: user.id },
-      relations: { department: { directManager: true } },
-    });
-
-    if (!requester) {
-      throw new NotFoundException('Requester not found');
-    }
-
-    if (!requester.department?.directManager) {
-      throw new BadRequestException(
-        'Cannot submit request: department has no direct manager assigned',
-      );
-    }
+    const requester = await this.loadRequester(user.id);
+    this.assertRequesterHasDirectManager(requester);
 
     let equipmentModel: EquipmentModel | undefined;
     let category: EquipmentCategory | undefined;
 
     if (createRequestDto.requestType === RequestType.LOAN) {
-      if (!createRequestDto.equipmentModelId) {
-        throw new BadRequestException(
-          'equipmentModelId is required for loan requests',
-        );
-      }
-      equipmentModel =
-        (await this.modelRepository.findOne({
-          where: { id: createRequestDto.equipmentModelId },
-          relations: { category: true },
-        })) ?? undefined;
-      if (!equipmentModel) {
-        throw new NotFoundException('Equipment model not found');
-      }
-      category = equipmentModel.category;
+      const validated = await this.validateLoanRequest(createRequestDto);
+      equipmentModel = validated.equipmentModel;
+      category = validated.category;
     } else {
-      if (!createRequestDto.requestedItemName || !createRequestDto.categoryId) {
-        throw new BadRequestException(
-          'requestedItemName and categoryId are required for procurement requests',
-        );
-      }
-      category =
-        (await this.categoryRepository.findOne({
-          where: { id: createRequestDto.categoryId },
-        })) ?? undefined;
-      if (!category) {
-        throw new NotFoundException('Category not found');
-      }
+      const validated = await this.validateProcurementRequest(createRequestDto);
+      category = validated.category;
     }
 
-    const savedRequest = await this.dataSource.transaction(async (manager) => {
-      const requestRepo = manager.getRepository(EquipmentRequest);
-      const stepRepo = manager.getRepository(ApprovalStep);
+    const savedRequest = await this.persistNewRequest(
+      createRequestDto,
+      requester,
+      equipmentModel,
+      category,
+    );
 
-      const request = requestRepo.create({
-        requester,
-        requestType: createRequestDto.requestType,
-        equipmentModel,
-        requestedItemName: createRequestDto.requestedItemName,
-        category,
-        quantity: createRequestDto.quantity ?? 1,
-        startDate: createRequestDto.startDate,
-        endDate: createRequestDto.endDate,
-        purpose: createRequestDto.purpose,
-        status: RequestStatus.PENDING_MANAGER_APPROVAL,
-      });
-
-      const persisted = await requestRepo.save(request);
-
-      const managerStep = stepRepo.create({
-        request: persisted,
-        level: 1,
-        approver: requester.department!.directManager!,
-        approverRole: ApprovalRole.DIRECT_MANAGER,
-        status: ApprovalStepStatus.PENDING,
-      });
-      await stepRepo.save(managerStep);
-
-      return requestRepo.findOneOrFail({
-        where: { id: persisted.id },
-        relations: {
-          requester: true,
-          equipmentModel: { category: true },
-          category: true,
-          approvalSteps: { approver: true },
-        },
-        order: { approvalSteps: { level: 'ASC' } },
-      });
-    });
-
-    const firstStep = savedRequest.approvalSteps?.[0];
-    if (firstStep?.approver) {
-      await this.notificationService.notifyApprovalRequired(
-        firstStep.approver,
-        savedRequest,
-        firstStep,
-      );
-    }
+    await this.notifyInitialApprover(savedRequest);
 
     return savedRequest;
   }
@@ -226,6 +152,127 @@ export class RequestService {
       saved,
     );
     return saved;
+  }
+
+  private async loadRequester(userId: string): Promise<Employee> {
+    const requester = await this.employeeRepository.findOne({
+      where: { id: userId },
+      relations: { department: { directManager: true } },
+    });
+
+    if (!requester) {
+      throw new NotFoundException('Requester not found');
+    }
+
+    return requester;
+  }
+
+  private assertRequesterHasDirectManager(requester: Employee): void {
+    if (!requester.department?.directManager) {
+      throw new BadRequestException(
+        'Cannot submit request: department has no direct manager assigned',
+      );
+    }
+  }
+
+  private async validateLoanRequest(
+    createRequestDto: CreateRequestDto,
+  ): Promise<{
+    equipmentModel: EquipmentModel;
+    category: EquipmentCategory;
+  }> {
+    if (!createRequestDto.equipmentModelId) {
+      throw new BadRequestException(
+        'equipmentModelId is required for loan requests',
+      );
+    }
+
+    const equipmentModel = await this.modelRepository.findOne({
+      where: { id: createRequestDto.equipmentModelId },
+      relations: { category: true },
+    });
+
+    if (!equipmentModel) {
+      throw new NotFoundException('Equipment model not found');
+    }
+
+    return { equipmentModel, category: equipmentModel.category };
+  }
+
+  private async validateProcurementRequest(
+    createRequestDto: CreateRequestDto,
+  ): Promise<{ category: EquipmentCategory }> {
+    if (!createRequestDto.requestedItemName || !createRequestDto.categoryId) {
+      throw new BadRequestException(
+        'requestedItemName and categoryId are required for procurement requests',
+      );
+    }
+
+    const category = await this.categoryRepository.findOne({
+      where: { id: createRequestDto.categoryId },
+    });
+
+    if (!category) {
+      throw new NotFoundException('Category not found');
+    }
+
+    return { category };
+  }
+
+  private async persistNewRequest(
+    createRequestDto: CreateRequestDto,
+    requester: Employee,
+    equipmentModel: EquipmentModel | undefined,
+    category: EquipmentCategory | undefined,
+  ): Promise<EquipmentRequest> {
+    return this.dataSource.transaction(async (manager) => {
+      const requestRepo = manager.getRepository(EquipmentRequest);
+
+      const request = requestRepo.create({
+        requester,
+        requestType: createRequestDto.requestType,
+        equipmentModel,
+        requestedItemName: createRequestDto.requestedItemName,
+        category,
+        quantity: createRequestDto.quantity ?? 1,
+        startDate: createRequestDto.startDate,
+        endDate: createRequestDto.endDate,
+        purpose: createRequestDto.purpose,
+        status: RequestStatus.PENDING_MANAGER_APPROVAL,
+      });
+
+      const persisted = await requestRepo.save(request);
+
+      await this.approvalWorkflowService.createInitialManagerApprovalStep(
+        manager,
+        persisted,
+        requester.department!.directManager!,
+      );
+
+      return requestRepo.findOneOrFail({
+        where: { id: persisted.id },
+        relations: {
+          requester: true,
+          equipmentModel: { category: true },
+          category: true,
+          approvalSteps: { approver: true },
+        },
+        order: { approvalSteps: { level: 'ASC' } },
+      });
+    });
+  }
+
+  private async notifyInitialApprover(
+    savedRequest: EquipmentRequest,
+  ): Promise<void> {
+    const firstStep = savedRequest.approvalSteps?.[0];
+    if (firstStep?.approver) {
+      await this.notificationService.notifyApprovalRequired(
+        firstStep.approver,
+        savedRequest,
+        firstStep,
+      );
+    }
   }
 
   private async assertCanViewRequest(

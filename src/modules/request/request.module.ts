@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ApprovalModule } from '../approval/approval.module';
 import { ApprovalStep } from '../approval/entities/approval-step.entity';
 import { AuthModule } from '../auth/auth.module';
 import { Employee } from '../employee/entities/employee.entity';
@@ -19,6 +20,7 @@ import { RequestService } from './services/request.service';
       EquipmentCategory,
       Employee,
     ]),
+    ApprovalModule,
     AuthModule,
     NotificationModule,
   ],
