@@ -1,0 +1,1 @@
+export const RETIRE_GRACE_PERIOD_DAYS = 30;
