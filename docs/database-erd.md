@@ -42,6 +42,9 @@ erDiagram
         uuid category_id FK
         text description
         decimal default_value
+        int procurement_year
+        int release_year
+        int expected_lifespan_months
         int low_stock_threshold
         timestamp created_at
         timestamp updated_at
@@ -53,6 +56,7 @@ erDiagram
         string asset_tag UK
         string serial_number
         enum status
+        text notes
         uuid assigned_employee_id FK
         timestamp assigned_at
         date expected_return_date
@@ -75,6 +79,8 @@ erDiagram
         text purpose
         enum status
         text rejected_reason
+        text cancellation_reason
+        timestamp cancelled_at
         timestamp created_at
         timestamp updated_at
     }
@@ -99,6 +105,12 @@ erDiagram
         uuid request_id FK
         uuid assigned_by_id FK
         timestamp assigned_at
+        date expected_return_date
+        uuid return_requested_by_id FK
+        timestamp return_requested_at
+        date return_by_date
+        timestamp returned_at
+        text return_note
         enum status
         timestamp created_at
         timestamp updated_at
@@ -122,6 +134,7 @@ erDiagram
         string title
         text message
         boolean is_read
+        timestamp read_at
         uuid request_id FK
         uuid approval_step_id FK
         uuid equipment_assignment_id FK
@@ -134,6 +147,7 @@ erDiagram
     equipment_categories ||--o{ equipment_models : category_id
     equipment_models ||--o{ equipment_assets : equipment_model_id
     employees ||--o{ equipment_assets : assigned_employee_id
+    employees ||--o{ equipment_assets : retired_by_id
     employees ||--o{ equipment_requests : requester_id
     equipment_models ||--o{ equipment_requests : equipment_model_id
     equipment_categories ||--o{ equipment_requests : category_id
@@ -144,12 +158,38 @@ erDiagram
     employees ||--o{ request_alternatives : suggested_by_id
     equipment_assets ||--o{ equipment_assignments : equipment_asset_id
     employees ||--o{ equipment_assignments : employee_id
+    employees ||--o{ equipment_assignments : assigned_by_id
+    employees ||--o{ equipment_assignments : return_requested_by_id
     equipment_requests ||--o{ equipment_assignments : request_id
     employees ||--o{ notifications : recipient_id
     equipment_requests ||--o{ notifications : request_id
     approval_steps ||--o{ notifications : approval_step_id
     equipment_assignments ||--o{ notifications : equipment_assignment_id
 ```
+
+## Request status flow
+
+```mermaid
+stateDiagram-v2
+    [*] --> pending_manager_approval: employee submits request
+
+    pending_manager_approval --> pending_procurement_approval: manager approves
+    pending_manager_approval --> rejected: manager rejects
+    pending_manager_approval --> cancelled: employee cancels
+
+    pending_procurement_approval --> fulfilled: loan approved and asset assigned
+    pending_procurement_approval --> procurement_approved: procurement request approved
+    pending_procurement_approval --> rejected: procurement rejects
+    pending_procurement_approval --> cancelled: employee cancels
+
+    procurement_approved --> fulfilled: PM adds asset and assigns with request_id
+
+    fulfilled --> [*]
+    rejected --> [*]
+    cancelled --> [*]
+```
+
+**Note:** External purchase happens outside the app. There is no `procurement_orders` table or `purchase_pending` status — after procurement approval the request stays at `procurement_approved` until inventory is updated and an asset is assigned.
 
 ## Tables
 
@@ -163,20 +203,23 @@ erDiagram
 | `equipment_assignments` | Assignment and return history                       |
 | `equipment_requests`    | Loan and procurement requests                       |
 | `approval_steps`        | Manager and procurement approval records            |
-| `request_alternatives`  | Suggested substitute models                         |
+| `request_alternatives`  | Suggested substitute models from procurement        |
 | `notifications`         | Workflow notifications                              |
 
 ## Key enums
 
-| Column                            | Values                                                                                                                      |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `employees.role`                  | `employee`, `direct_manager`, `procurement_manager`, `admin`                                                                |
-| `employees.account_status`        | `active`, `inactive`                                                                                                        |
-| `equipment_assets.status`         | `available`, `in_use`, `reserved`, `return_requested`, `maintenance`, `retired`                                             |
-| `equipment_requests.request_type` | `loan`, `procurement`                                                                                                       |
-| `equipment_requests.status`       | `pending_manager_approval`, `pending_procurement_approval`, `procurement_approved`, `fulfilled`, `rejected`, `cancelled`, … |
-| `approval_steps.approver_role`    | `direct_manager`, `procurement_manager`, `admin`                                                                            |
-| `approval_steps.status`           | `pending`, `approved`, `rejected`, `skipped`                                                                                |
+| Column                            | Values                                                                                                                                                                                                                        |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `employees.role`                  | `employee`, `direct_manager`, `procurement_manager`, `admin`                                                                                                                                                                  |
+| `employees.account_status`        | `active`, `inactive`                                                                                                                                                                                                          |
+| `equipment_assets.status`         | `available`, `in_use`, `reserved`, `return_requested`, `maintenance`, `retired`                                                                                                                                               |
+| `equipment_requests.request_type` | `loan`, `procurement`                                                                                                                                                                                                         |
+| `equipment_requests.status`       | `pending_manager_approval`, `pending_procurement_approval`, `procurement_approved`, `approved`, `fulfilled`, `rejected`, `cancelled`                                                                                          |
+| `approval_steps.approver_role`    | `direct_manager`, `procurement_manager`, `admin`                                                                                                                                                                              |
+| `approval_steps.status`           | `pending`, `approved`, `rejected`, `skipped`                                                                                                                                                                                  |
+| `equipment_assignments.status`    | `active`, `return_requested`, `returned`, `cancelled`                                                                                                                                                                         |
+| `request_alternatives.status`     | `suggested`, `accepted_by_employee`, `rejected_by_employee`                                                                                                                                                                   |
+| `notifications.type`              | `approval_required`, `request_approved`, `request_rejected`, `request_cancelled`, `request_update`, `procurement_approved`, `alternative_suggested`, `equipment_assigned`, `equipment_return_requested`, `equipment_returned` |
 
 ## Inspect schema in Docker
 
