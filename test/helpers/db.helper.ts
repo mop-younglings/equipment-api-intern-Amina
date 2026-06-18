@@ -24,9 +24,20 @@ export async function runMigrations(dataSource: DataSource): Promise<void> {
 }
 
 export async function cleanDatabase(dataSource: DataSource): Promise<void> {
-  await dataSource.query(
-    `TRUNCATE TABLE "notifications", "approval_steps", "equipment_requests", "equipment", "employees" RESTART IDENTITY CASCADE`,
-  );
+  await dataSource.query(`
+    TRUNCATE TABLE
+      "notifications",
+      "request_alternatives",
+      "equipment_assignments",
+      "approval_steps",
+      "equipment_requests",
+      "equipment_assets",
+      "equipment_models",
+      "equipment_categories",
+      "employees",
+      "departments"
+    RESTART IDENTITY CASCADE
+  `);
 }
 
 export async function isDatabaseAvailable(): Promise<boolean> {
