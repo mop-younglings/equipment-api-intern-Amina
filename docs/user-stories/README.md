@@ -15,4 +15,4 @@ employee → direct_manager → procurement_manager → admin
 
 Each document follows the same structure: **User story**, **Acceptance criteria**, **API Contract**, request examples, **Data model**, and **Error scenarios**.
 
-For domain entities and business rules, see [equipment.md](../equipment.md).
+For domain entities and business rules, see [equipment.md](../equipment.md). Database ERD: [database-erd.md](../database-erd.md).
