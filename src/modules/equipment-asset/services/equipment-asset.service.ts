@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -70,12 +71,8 @@ export class EquipmentAssetService {
   }
 
   async create(dto: CreateEquipmentAssetDto): Promise<EquipmentAsset> {
-    const model = await this.modelRepository.findOne({
-      where: { id: dto.equipmentModelId },
-    });
-    if (!model) {
-      throw new NotFoundException('Equipment model not found');
-    }
+    const model = await this.loadEquipmentModel(dto.equipmentModelId);
+    await this.assertAssetTagAvailable(dto.assetTag);
 
     const asset = this.assetRepository.create({
       equipmentModel: model,
@@ -267,6 +264,25 @@ export class EquipmentAssetService {
   assertProcurementAccess(user: AuthenticatedUser): void {
     if (!this.accessControl.isProcurementManagerOrAbove(user)) {
       throw new ForbiddenException('Procurement manager access required');
+    }
+  }
+
+  private async loadEquipmentModel(id: string): Promise<EquipmentModel> {
+    const model = await this.modelRepository.findOne({
+      where: { id },
+    });
+    if (!model) {
+      throw new NotFoundException('Equipment model not found');
+    }
+    return model;
+  }
+
+  private async assertAssetTagAvailable(assetTag: string): Promise<void> {
+    const existing = await this.assetRepository.findOne({
+      where: { assetTag },
+    });
+    if (existing) {
+      throw new ConflictException('Asset tag already exists');
     }
   }
 }

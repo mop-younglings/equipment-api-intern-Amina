@@ -1,4 +1,8 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -8,6 +12,7 @@ import { AuthenticatedUser } from '../../../common/types/authenticated-user.type
 import { Employee } from '../../employee/entities/employee.entity';
 import { EmployeeRole } from '../../employee/enums/employee-role.enum';
 import { EquipmentAssignment } from '../../equipment-assignment/entities/equipment-assignment.entity';
+import { EquipmentCategory } from '../../equipment-category/entities/equipment-category.entity';
 import { EquipmentModel } from '../../equipment-model/entities/equipment-model.entity';
 import { EquipmentRequest } from '../../request/entities/equipment-request.entity';
 import { NotificationService } from '../../notification/services/notification.service';
@@ -32,6 +37,8 @@ describe('EquipmentAssetService', () => {
   const model: EquipmentModel = {
     id: modelId,
     name: 'MacBook Pro',
+    category: { id: 'category-1', name: 'Laptop' } as EquipmentCategory,
+    defaultValue: 0,
     lowStockThreshold: 2,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -171,6 +178,7 @@ describe('EquipmentAssetService', () => {
         Repository<EquipmentModel>
       >;
       modelRepo.findOne.mockResolvedValue(model);
+      assetRepository.findOne.mockResolvedValue(null);
       assetRepository.create.mockReturnValue(buildAvailableAsset());
       assetRepository.save.mockResolvedValue(buildAvailableAsset());
 
@@ -179,7 +187,35 @@ describe('EquipmentAssetService', () => {
         assetTag: 'MBP-001',
       });
 
+      expect(assetRepository.findOne).toHaveBeenCalledWith({
+        where: { assetTag: 'MBP-001' },
+      });
       expect(result.assetTag).toBe('MBP-001');
+    });
+
+    it('throws ConflictException when asset tag already exists', async () => {
+      const modelRepo = service['modelRepository'] as jest.Mocked<
+        Repository<EquipmentModel>
+      >;
+      modelRepo.findOne.mockResolvedValue(model);
+      assetRepository.findOne.mockResolvedValue(buildAvailableAsset());
+
+      await expect(
+        service.create({
+          equipmentModelId: modelId,
+          assetTag: 'MBP-001',
+        }),
+      ).rejects.toThrow(ConflictException);
+
+      await expect(
+        service.create({
+          equipmentModelId: modelId,
+          assetTag: 'MBP-001',
+        }),
+      ).rejects.toThrow('Asset tag already exists');
+
+      expect(assetRepository.create).not.toHaveBeenCalled();
+      expect(assetRepository.save).not.toHaveBeenCalled();
     });
 
     it('assigns available asset to employee', async () => {
