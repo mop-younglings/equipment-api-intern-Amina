@@ -10,37 +10,36 @@ import {
 } from 'typeorm';
 import { Employee } from '../../employee/entities/employee.entity';
 import { EquipmentRequest } from '../../request/entities/equipment-request.entity';
+import { ApprovalRole } from '../enums/approval-role.enum';
 import { ApprovalStepStatus } from '../enums/approval-step-status.enum';
 
 @Entity('approval_steps')
 export class ApprovalStep {
-  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
+  @ApiProperty()
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
+  @ApiProperty({ type: () => EquipmentRequest })
   @ManyToOne(() => EquipmentRequest, (request) => request.approvalSteps, {
-    nullable: false,
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'request_id' })
   request!: EquipmentRequest;
 
-  @ApiProperty({
-    example: 1,
-    description: 'Approval level (1 = manager, 2 = admin for high-value items)',
-  })
+  @ApiProperty({ example: 1 })
   @Column({ type: 'int' })
   level!: number;
 
   @ApiProperty({ type: () => Employee })
-  @ManyToOne(() => Employee, { nullable: false, onDelete: 'CASCADE' })
+  @ManyToOne(() => Employee, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'approver_id' })
   approver!: Employee;
 
-  @ApiProperty({
-    enum: ApprovalStepStatus,
-    example: ApprovalStepStatus.PENDING,
-  })
+  @ApiProperty({ enum: ApprovalRole })
+  @Column({ name: 'approver_role', type: 'enum', enum: ApprovalRole })
+  approverRole!: ApprovalRole;
+
+  @ApiProperty({ enum: ApprovalStepStatus })
   @Column({
     type: 'enum',
     enum: ApprovalStepStatus,
@@ -48,11 +47,11 @@ export class ApprovalStep {
   })
   status!: ApprovalStepStatus;
 
-  @ApiPropertyOptional({ example: 'Approved for Q2 onboarding' })
+  @ApiPropertyOptional()
   @Column({ type: 'text', nullable: true })
   comment?: string;
 
-  @ApiPropertyOptional({ example: '2024-06-15T10:30:00.000Z' })
+  @ApiPropertyOptional()
   @Column({ name: 'acted_at', type: 'timestamp', nullable: true })
   actedAt?: Date;
 
@@ -62,5 +61,3 @@ export class ApprovalStep {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
 }
-
-export { ApprovalStepStatus } from '../enums/approval-step-status.enum';

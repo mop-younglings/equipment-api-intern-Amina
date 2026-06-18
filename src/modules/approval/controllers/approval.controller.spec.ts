@@ -12,7 +12,7 @@ describe('ApprovalController', () => {
   const user = {
     id: 'manager-1',
     email: 'bob@example.com',
-    role: EmployeeRole.USER,
+    role: EmployeeRole.DIRECT_MANAGER,
   };
 
   const mockStep = {
@@ -27,7 +27,8 @@ describe('ApprovalController', () => {
         {
           provide: ApprovalService,
           useValue: {
-            findPendingForUser: jest.fn(),
+            findMyPending: jest.fn(),
+            findOne: jest.fn(),
             approve: jest.fn(),
             reject: jest.fn(),
           },
@@ -39,13 +40,13 @@ describe('ApprovalController', () => {
     service = module.get(ApprovalService);
   });
 
-  it('delegates findPending to service', async () => {
-    service.findPendingForUser.mockResolvedValue([mockStep]);
+  it('delegates findMy to service', async () => {
+    service.findMyPending.mockResolvedValue([mockStep]);
 
-    const result = await controller.findPending(user);
+    const result = await controller.findMy(user);
 
     expect(result).toEqual([mockStep]);
-    expect(service.findPendingForUser).toHaveBeenCalledWith(user.id);
+    expect(service.findMyPending).toHaveBeenCalledWith(user.id);
   });
 
   it('delegates approve to service', async () => {
