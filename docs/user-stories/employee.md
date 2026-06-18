@@ -86,7 +86,7 @@ As an employee, I want to browse available equipment, submit loan or procurement
 
 ### Request statuses (read-only for employee)
 
-`pending_manager_approval` · `pending_procurement_approval` · `purchase_pending` · `fulfilled` · `rejected` · `cancelled`
+`pending_manager_approval` · `pending_procurement_approval` · `procurement_approved` · `fulfilled` · `rejected` · `cancelled`
 
 ## Error scenarios
 

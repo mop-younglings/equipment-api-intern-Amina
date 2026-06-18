@@ -19,7 +19,7 @@ Employee requests an existing equipment model. After manager and procurement app
 
 ### Procurement
 
-Employee requests an item not in inventory. After approvals, a procurement order is created (`purchase_pending`). When received, assets are added and assigned.
+Employee requests an item not in inventory. After manager and procurement approval, the request moves to `procurement_approved`. The procurement manager acquires the item externally, adds models/assets in the app, and assigns equipment to fulfill the request.
 
 ## Entity Model
 
@@ -32,7 +32,6 @@ Employee requests an item not in inventory. After approvals, a procurement order
 - **equipment_requests** — Loan/procurement requests with workflow status
 - **approval_steps** — Manager and procurement approval records
 - **request_alternatives** — Procurement manager suggestions
-- **procurement_orders** — External purchase tracking
 - **notifications** — Workflow event notifications
 
 ## Business Rules

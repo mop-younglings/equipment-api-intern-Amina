@@ -115,17 +115,6 @@ erDiagram
         timestamp updated_at
     }
 
-    procurement_orders {
-        uuid id PK
-        uuid request_id FK
-        string item_name
-        int quantity
-        enum status
-        uuid created_by_id FK
-        timestamp created_at
-        timestamp updated_at
-    }
-
     notifications {
         uuid id PK
         uuid recipient_id FK
@@ -153,8 +142,6 @@ erDiagram
     equipment_requests ||--o{ request_alternatives : request_id
     equipment_models ||--o{ request_alternatives : equipment_model_id
     employees ||--o{ request_alternatives : suggested_by_id
-    equipment_requests ||--o{ procurement_orders : request_id
-    employees ||--o{ procurement_orders : created_by_id
     equipment_assets ||--o{ equipment_assignments : equipment_asset_id
     employees ||--o{ equipment_assignments : employee_id
     equipment_requests ||--o{ equipment_assignments : request_id
@@ -177,20 +164,19 @@ erDiagram
 | `equipment_requests`    | Loan and procurement requests                       |
 | `approval_steps`        | Manager and procurement approval records            |
 | `request_alternatives`  | Suggested substitute models                         |
-| `procurement_orders`    | External purchase tracking                          |
 | `notifications`         | Workflow notifications                              |
 
 ## Key enums
 
-| Column                            | Values                                                                                                                  |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `employees.role`                  | `employee`, `direct_manager`, `procurement_manager`, `admin`                                                            |
-| `employees.account_status`        | `active`, `inactive`                                                                                                    |
-| `equipment_assets.status`         | `available`, `in_use`, `reserved`, `return_requested`, `maintenance`, `retired`                                         |
-| `equipment_requests.request_type` | `loan`, `procurement`                                                                                                   |
-| `equipment_requests.status`       | `pending_manager_approval`, `pending_procurement_approval`, `purchase_pending`, `fulfilled`, `rejected`, `cancelled`, … |
-| `approval_steps.approver_role`    | `direct_manager`, `procurement_manager`, `admin`                                                                        |
-| `approval_steps.status`           | `pending`, `approved`, `rejected`, `skipped`                                                                            |
+| Column                            | Values                                                                                                                      |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `employees.role`                  | `employee`, `direct_manager`, `procurement_manager`, `admin`                                                                |
+| `employees.account_status`        | `active`, `inactive`                                                                                                        |
+| `equipment_assets.status`         | `available`, `in_use`, `reserved`, `return_requested`, `maintenance`, `retired`                                             |
+| `equipment_requests.request_type` | `loan`, `procurement`                                                                                                       |
+| `equipment_requests.status`       | `pending_manager_approval`, `pending_procurement_approval`, `procurement_approved`, `fulfilled`, `rejected`, `cancelled`, … |
+| `approval_steps.approver_role`    | `direct_manager`, `procurement_manager`, `admin`                                                                            |
+| `approval_steps.status`           | `pending`, `approved`, `rejected`, `skipped`                                                                                |
 
 ## Inspect schema in Docker
 

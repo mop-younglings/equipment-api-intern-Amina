@@ -1,15 +1,29 @@
 # Equipment Request API
 
-A NestJS REST API for managing company equipment inventory, employee equipment requests, and multi-level approval workflows. Employees can request available equipment; managers approve standard items, while high-value items (≥ $1,000) require an additional admin approval.
+A NestJS REST API for company equipment inventory, loan/procurement requests, multi-level approvals (direct manager → procurement manager), assignments, returns, and notifications.
 
 ## Features
 
-- **Equipment management** — CRUD for inventory with assignment tracking and monetary value
-- **JWT authentication** — Register, login, role-based access (`admin`, `user`)
-- **Equipment requests** — Employees submit requests for available equipment
-- **Multi-level approvals** — Manager approval for all requests; admin approval for high-value items
-- **Approval comments** — Approvers can approve or reject with optional comments
-- **OpenAPI documentation** — Interactive Swagger UI at `/api`
+- **Four roles** — `employee`, `direct_manager`, `procurement_manager`, `admin` with hierarchical access control
+- **Two request types** — Loan (existing inventory) and procurement (external purchase)
+- **Department-based routing** — Requests go to the direct manager of the requester's department
+- **Inventory model** — Categories, models, and physical assets with status tracking
+- **Assignments & returns** — Full assignment history; managers can request equipment returns
+- **Procurement workflow** — Purchase orders, availability checks, alternative suggestions
+- **Notifications** — Created for approvals, rejections, assignments, returns, and updates
+- **JWT authentication** — Register, login, profile (`GET /auth/me`)
+- **OpenAPI documentation** — Swagger UI at `/api`
+
+## User Stories
+
+User stories are documented by role in [`docs/user-stories/`](docs/user-stories/README.md):
+
+- [Employee](docs/user-stories/employee.md)
+- [Direct Manager](docs/user-stories/direct-manager.md)
+- [Procurement Manager](docs/user-stories/procurement-manager.md)
+- [Admin](docs/user-stories/admin.md)
+
+Database schema: [docs/database-erd.md](docs/database-erd.md) (Mermaid ERD, viewable on GitHub).
 
 ## Tech Stack
 
@@ -26,241 +40,161 @@ A NestJS REST API for managing company equipment inventory, employee equipment r
 
 ## Quick Start
 
-### Prerequisites
-
-- Node.js 20+
-- Docker (for PostgreSQL)
-
-### Setup
-
 ```bash
-# Install dependencies
 npm install
-
-# Start PostgreSQL
 npm run docker:up
-
-# Copy environment file and adjust if needed
 cp .env.example .env
-
-# Run database migrations
 npm run migration:run
-
-# Seed demo data
 npm run seed
-
-# Start the API in watch mode
 npm run start:dev
 ```
 
-The API runs at `http://localhost:3000`. Swagger UI is at `http://localhost:3000/api`.
+API: `http://localhost:3000` · Swagger: `http://localhost:3000/api`
 
-### Demo Credentials
+### Demo Credentials (password: `password123`)
 
-After seeding, these accounts are available (password: `password123`):
+| Email                         | Role                                  |
+| ----------------------------- | ------------------------------------- |
+| `admin@example.com`           | Admin                                 |
+| `pat.procurement@example.com` | Procurement Manager                   |
+| `bob.manager@example.com`     | Direct Manager (Engineering & Design) |
+| `jane.doe@example.com`        | Employee (Engineering)                |
+| `john.smith@example.com`      | Employee (Design)                     |
 
-| Email                     | Role           | Notes                               |
-| ------------------------- | -------------- | ----------------------------------- |
-| `admin@example.com`       | Admin          | Final approver for high-value items |
-| `bob.manager@example.com` | User (Manager) | Approves team requests (level 1)    |
-| `jane.doe@example.com`    | User           | Engineering; reports to Bob         |
-| `john.smith@example.com`  | User           | Design; reports to Bob              |
+**After seed:** John has a pending iPhone loan request; Jane has a procurement request awaiting Pat with an iPad alternative suggested.
 
-**Demo scenario after seed:**
-
-- John has a **pending** iPhone request awaiting Bob's approval
-- Jane has a **partially approved** iPad Pro request awaiting admin approval (Bob already approved)
-
-## Architecture
-
-```mermaid
-flowchart TB
-    subgraph Client
-        UI[Web / Mobile Client]
-    end
-
-    subgraph API["NestJS API"]
-        Auth[AuthModule]
-        Emp[EmployeeModule]
-        Equip[EquipmentModule]
-        Req[RequestModule]
-        Appr[ApprovalModule]
-    end
-
-    subgraph Database["PostgreSQL"]
-        employees[(employees)]
-        equipment[(equipment)]
-        requests[(equipment_requests)]
-        steps[(approval_steps)]
-    end
-
-    UI --> Auth
-    UI --> Emp
-    UI --> Equip
-    UI --> Req
-    UI --> Appr
-
-    Auth --> employees
-    Emp --> employees
-    Equip --> equipment
-    Req --> requests
-    Req --> steps
-    Appr --> steps
-    Appr --> requests
-    Appr --> equipment
-
-    employees -->|manager_id| employees
-    equipment -->|assigned_employee_id| employees
-    requests -->|requester_id| employees
-    requests -->|equipment_id| equipment
-    steps -->|request_id| requests
-    steps -->|approver_id| employees
-```
-
-### Approval Workflow
+## Approval Workflow
 
 ```mermaid
 sequenceDiagram
     participant E as Employee
-    participant API as Request API
-    participant M as Manager
-    participant A as Admin
+    participant DM as Direct Manager
+    participant PM as Procurement Manager
 
-    E->>API: POST /requests (available equipment)
-    API->>API: Create approval steps
-
-    alt Standard item (< $1,000)
-        API-->>M: Level 1 pending
-        M->>API: PATCH /approvals/:id/approve
-        API->>API: Assign equipment → APPROVED
-    else High-value item (≥ $1,000)
-        API-->>M: Level 1 pending
-        M->>API: PATCH /approvals/:id/approve
-        API-->>A: Level 2 pending
-        A->>API: PATCH /approvals/:id/approve
-        API->>API: Assign equipment → APPROVED
+    E->>DM: Submit loan or procurement request
+    DM->>DM: Approve or reject (reason required)
+    alt Approved
+        PM->>PM: Review request
+        alt Loan request
+            PM->>E: Assign available asset → fulfilled
+        else Procurement request
+            PM->>PM: Approve → procurement_approved
+            PM->>PM: Add model/asset in inventory
+            PM->>E: Assign asset with requestId → fulfilled
+        end
     end
-
-    Note over M,A: Either approver can reject at their level
 ```
 
-### Module Structure
+## Module Structure
 
 ```
-src/
-├── common/           # Shared filters, decorators, constants
-├── config/           # Database, auth, Swagger configuration
-├── database/         # Migrations and seed scripts
-└── modules/
-    ├── auth/         # JWT login/register, guards
-    ├── employee/     # Employee CRUD
-    ├── equipment/    # Equipment inventory CRUD
-    ├── request/      # Equipment request submission
-    ├── approval/     # Approve/reject workflow
-    └── notification/ # User notifications for request events
+src/modules/
+├── auth/                  # Login, register, JWT, role guards
+├── employee/              # Employee entity
+├── department/            # Departments and direct managers
+├── equipment-category/    # Laptop, Monitor, etc.
+├── equipment-model/       # Model catalog (Dell Latitude, etc.)
+├── equipment-asset/       # Physical inventory + catalog endpoints
+├── equipment-assignment/  # Assignments, returns, manager views
+├── request/               # Loan/procurement requests
+├── approval/              # Manager and procurement approvals
+├── procurement/           # Alternatives, availability checks
+├── notification/          # In-app notifications
+└── admin/                 # User and department administration
 ```
 
 ## API Overview
 
-All endpoints except auth register/login require a Bearer JWT token.
+Authenticated endpoints require `Authorization: Bearer <token>` unless noted.
 
 ### Auth
 
-| Method | Path             | Description                     |
-| ------ | ---------------- | ------------------------------- |
-| POST   | `/auth/register` | Register a new employee account |
-| POST   | `/auth/login`    | Authenticate and receive JWT    |
+| Method | Path             | Description               |
+| ------ | ---------------- | ------------------------- |
+| POST   | `/auth/register` | Register employee account |
+| POST   | `/auth/login`    | Receive JWT               |
+| GET    | `/auth/me`       | Current user profile      |
 
-### Employees
+### Catalog & Requests (Employee)
 
-| Method | Path             | Auth | Description        |
-| ------ | ---------------- | ---- | ------------------ |
-| GET    | `/employees`     | —    | List all employees |
-| GET    | `/employees/:id` | —    | Get employee by ID |
-| POST   | `/employees`     | —    | Create employee    |
-| PATCH  | `/employees/:id` | —    | Update employee    |
-| DELETE | `/employees/:id` | —    | Delete employee    |
+| Method | Path                            | Description                        |
+| ------ | ------------------------------- | ---------------------------------- |
+| GET    | `/equipment/catalog`            | Browse models with availability    |
+| GET    | `/equipment/catalog/similar?q=` | Search similar available models    |
+| GET    | `/equipment/models/:id`         | Model details                      |
+| POST   | `/requests`                     | Create loan or procurement request |
+| GET    | `/requests/my`                  | Own requests                       |
+| GET    | `/requests/:id`                 | Request detail                     |
+| PATCH  | `/requests/:id/cancel`          | Cancel pending request             |
+| GET    | `/requests/:id/timeline`        | Approval timeline                  |
+| GET    | `/equipment-assignments/my`     | Assigned equipment                 |
+| GET    | `/equipment-assignments/:id`    | Assignment detail                  |
 
-### Equipment
+### Direct Manager
 
-| Method | Path             | Auth        | Description         |
-| ------ | ---------------- | ----------- | ------------------- |
-| GET    | `/equipment`     | JWT         | List all equipment  |
-| GET    | `/equipment/:id` | JWT         | Get equipment by ID |
-| POST   | `/equipment`     | JWT + Admin | Create equipment    |
-| PATCH  | `/equipment/:id` | JWT + Admin | Update equipment    |
-| DELETE | `/equipment/:id` | JWT + Admin | Delete equipment    |
-
-### Requests
-
-| Method | Path            | Auth | Description                                   |
-| ------ | --------------- | ---- | --------------------------------------------- |
-| GET    | `/requests`     | JWT  | List requests (own for users, all for admins) |
-| GET    | `/requests/:id` | JWT  | Get request with approval history             |
-| POST   | `/requests`     | JWT  | Submit equipment request                      |
+| Method | Path                                         | Description                     |
+| ------ | -------------------------------------------- | ------------------------------- |
+| GET    | `/manager/requests/pending`                  | Team requests awaiting approval |
+| GET    | `/manager/requests`                          | All team requests               |
+| GET    | `/manager/team-equipment`                    | Active team assignments         |
+| POST   | `/equipment-assignments/:id/return-request`  | Request equipment return        |
+| PATCH  | `/equipment-assignments/:id/complete-return` | Mark returned                   |
 
 ### Approvals
 
-| Method | Path                     | Auth | Description                             |
-| ------ | ------------------------ | ---- | --------------------------------------- |
-| GET    | `/approvals`             | JWT  | List pending approvals for current user |
-| PATCH  | `/approvals/:id/approve` | JWT  | Approve with optional comment           |
-| PATCH  | `/approvals/:id/reject`  | JWT  | Reject with optional comment            |
+| Method | Path                         | Description              |
+| ------ | ---------------------------- | ------------------------ |
+| GET    | `/approvals/my`              | Pending approval steps   |
+| GET    | `/approvals/:id`             | Approval step detail     |
+| PATCH  | `/approvals/:stepId/approve` | Approve step             |
+| PATCH  | `/approvals/:stepId/reject`  | Reject (reason required) |
+
+### Procurement Manager
+
+| Method                | Path                                     | Description                               |
+| --------------------- | ---------------------------------------- | ----------------------------------------- |
+| GET                   | `/procurement/approvals`                 | Requests awaiting procurement             |
+| GET                   | `/procurement/requests/:id/availability` | Check asset availability                  |
+| POST                  | `/requests/:id/alternatives`             | Suggest alternative model                 |
+| GET                   | `/inventory`                             | Full asset inventory                      |
+| GET                   | `/inventory/stats`                       | Inventory statistics                      |
+| GET/POST              | `/equipment-categories`                  | Manage categories                         |
+| GET/POST/PATCH        | `/equipment-models`                      | Manage models                             |
+| GET/POST/PATCH/DELETE | `/equipment-assets`                      | Manage assets                             |
+| POST                  | `/equipment-assets/:id/assign`           | Assign asset (optionally link to request) |
+
+### Admin
+
+| Method                | Path                              | Description           |
+| --------------------- | --------------------------------- | --------------------- |
+| GET/POST/PATCH/DELETE | `/admin/users`                    | User management       |
+| PATCH                 | `/admin/users/:id/role`           | Change role           |
+| PATCH                 | `/admin/users/:id/status`         | Activate/deactivate   |
+| POST                  | `/admin/users/:id/reset-password` | Reset password        |
+| GET/POST/PATCH/DELETE | `/admin/departments`              | Department management |
 
 ### Notifications
 
-| Method | Path                          | Auth | Description                         |
-| ------ | ----------------------------- | ---- | ----------------------------------- |
-| GET    | `/notifications`              | JWT  | List notifications for current user |
-| GET    | `/notifications/unread-count` | JWT  | Get unread notification count       |
-| PATCH  | `/notifications/read-all`     | JWT  | Mark all notifications as read      |
-| PATCH  | `/notifications/:id/read`     | JWT  | Mark a single notification as read  |
-
-Notifications are created automatically when requests are submitted, approved, rejected, or advance to the next approval level.
-
-Full request/response schemas are available in Swagger at `/api`.
+| Method | Path                          | Description        |
+| ------ | ----------------------------- | ------------------ |
+| GET    | `/notifications`              | List notifications |
+| GET    | `/notifications/unread-count` | Unread count       |
+| PATCH  | `/notifications/:id/read`     | Mark read          |
+| PATCH  | `/notifications/read-all`     | Mark all read      |
 
 ## Testing
 
 ```bash
-# Unit tests
-npm test
-
-# Unit tests with coverage
-npm run test:cov
-
-# Integration tests (requires PostgreSQL running)
-npm run test:e2e
+npm test              # Unit tests (≥70% coverage enforced)
+npm run test:cov      # Coverage report
+npm run test:e2e      # Integration/e2e (requires PostgreSQL)
 ```
 
-Integration tests connect to the real PostgreSQL database configured in `.env`, run migrations, and reset data between tests.
-
-## Scripts
-
-| Script                     | Description                |
-| -------------------------- | -------------------------- |
-| `npm run start:dev`        | Start API with hot reload  |
-| `npm run docker:up`        | Start PostgreSQL container |
-| `npm run migration:run`    | Apply pending migrations   |
-| `npm run migration:revert` | Revert last migration      |
-| `npm run seed`             | Populate demo data         |
-| `npm run lint`             | Run ESLint with auto-fix   |
-| `npm run format`           | Run Prettier               |
+E2E tests cover loan/procurement workflows, cancellations, rejections, alternatives, returns, asset delete/retire rules, admin actions, RBAC, and notifications.
 
 ## Environment Variables
 
-See `.env.example` for all configuration options:
-
-| Variable         | Default         | Description             |
-| ---------------- | --------------- | ----------------------- |
-| `DB_HOST`        | `localhost`     | PostgreSQL host         |
-| `DB_PORT`        | `5433`          | PostgreSQL port         |
-| `DB_USERNAME`    | `equipment`     | Database user           |
-| `DB_PASSWORD`    | `equipment`     | Database password       |
-| `DB_NAME`        | `equipment_api` | Database name           |
-| `JWT_SECRET`     | —               | Secret for signing JWTs |
-| `JWT_EXPIRES_IN` | `1d`            | Token expiration        |
-| `PORT`           | `3000`          | API port                |
+See `.env.example`. Key values: `DB_*`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `PORT`.
 
 ## License
 
