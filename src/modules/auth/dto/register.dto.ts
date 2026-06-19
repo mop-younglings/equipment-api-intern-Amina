@@ -7,6 +7,7 @@ import {
   IsUUID,
   MinLength,
 } from 'class-validator';
+import { IsCompanyEmail } from '../../../common/validators/is-company-email.decorator';
 
 export class RegisterDto {
   @ApiProperty({ example: 'Jane' })
@@ -19,8 +20,9 @@ export class RegisterDto {
   @IsNotEmpty()
   lastName!: string;
 
-  @ApiProperty({ example: 'jane.doe@example.com' })
+  @ApiProperty({ example: 'jane.doe@ministryofprogramming.com' })
   @IsEmail()
+  @IsCompanyEmail()
   email!: string;
 
   @ApiPropertyOptional()

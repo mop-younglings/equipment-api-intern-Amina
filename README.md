@@ -71,13 +71,13 @@ Do not run `start:dev` alongside `docker:up` — both bind port 3000.
 
 ### Demo Credentials (password: `password123`)
 
-| Email                         | Role                                  |
-| ----------------------------- | ------------------------------------- |
-| `admin@example.com`           | Admin                                 |
-| `pat.procurement@example.com` | Procurement Manager                   |
-| `bob.manager@example.com`     | Direct Manager (Engineering & Design) |
-| `jane.doe@example.com`        | Employee (Engineering)                |
-| `john.smith@example.com`      | Employee (Design)                     |
+| Email                                       | Role                                  |
+| ------------------------------------------- | ------------------------------------- |
+| `admin@ministryofprogramming.com`           | Admin                                 |
+| `pat.procurement@ministryofprogramming.com` | Procurement Manager                   |
+| `bob.manager@ministryofprogramming.com`     | Direct Manager (Engineering & Design) |
+| `jane.doe@ministryofprogramming.com`        | Employee (Engineering)                |
+| `john.smith@ministryofprogramming.com`      | Employee (Design)                     |
 
 **After seed:** John has a pending iPhone loan request; Jane has a procurement request awaiting Pat.
 

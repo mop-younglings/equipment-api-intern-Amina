@@ -7,6 +7,7 @@ import {
   IsUUID,
   MinLength,
 } from 'class-validator';
+import { IsCompanyEmail } from '../../../common/validators/is-company-email.decorator';
 import { AccountStatus } from '../../employee/enums/account-status.enum';
 import { EmployeeRole } from '../../employee/enums/employee-role.enum';
 
@@ -19,8 +20,9 @@ export class CreateAdminUserDto {
   @IsString()
   lastName!: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: 'jane.doe@ministryofprogramming.com' })
   @IsEmail()
+  @IsCompanyEmail()
   email!: string;
 
   @ApiProperty()
@@ -55,9 +57,10 @@ export class UpdateAdminUserDto {
   @IsString()
   lastName?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: 'jane.doe@ministryofprogramming.com' })
   @IsOptional()
   @IsEmail()
+  @IsCompanyEmail()
   email?: string;
 
   @ApiPropertyOptional({ nullable: true })

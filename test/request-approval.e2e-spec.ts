@@ -513,7 +513,7 @@ async function seedFixtures(dataSource: DataSource): Promise<TestFixtures> {
     employeeRepo.create({
       firstName: 'Admin',
       lastName: 'User',
-      email: 'admin@test.example.com',
+      email: 'admin@ministryofprogramming.com',
       password: passwordHash,
       role: EmployeeRole.ADMIN,
       accountStatus: AccountStatus.ACTIVE,
@@ -524,7 +524,7 @@ async function seedFixtures(dataSource: DataSource): Promise<TestFixtures> {
     employeeRepo.create({
       firstName: 'Pat',
       lastName: 'Procurement',
-      email: 'procurement@test.example.com',
+      email: 'procurement@ministryofprogramming.com',
       password: passwordHash,
       role: EmployeeRole.PROCUREMENT_MANAGER,
       accountStatus: AccountStatus.ACTIVE,
@@ -535,7 +535,7 @@ async function seedFixtures(dataSource: DataSource): Promise<TestFixtures> {
     employeeRepo.create({
       firstName: 'Bob',
       lastName: 'Manager',
-      email: 'manager@test.example.com',
+      email: 'manager@ministryofprogramming.com',
       password: passwordHash,
       role: EmployeeRole.DIRECT_MANAGER,
       accountStatus: AccountStatus.ACTIVE,
@@ -553,7 +553,7 @@ async function seedFixtures(dataSource: DataSource): Promise<TestFixtures> {
     employeeRepo.create({
       firstName: 'Jane',
       lastName: 'Doe',
-      email: 'employee@test.example.com',
+      email: 'employee@ministryofprogramming.com',
       password: passwordHash,
       role: EmployeeRole.EMPLOYEE,
       accountStatus: AccountStatus.ACTIVE,

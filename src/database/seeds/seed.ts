@@ -49,7 +49,11 @@ async function seed(): Promise<void> {
   const notificationRepo = dataSource.getRepository(Notification);
   const assignmentRepo = dataSource.getRepository(EquipmentAssignment);
 
-  if (await employeeRepo.existsBy({ email: 'bob.manager@example.com' })) {
+  if (
+    await employeeRepo.existsBy({
+      email: 'bob.manager@ministryofprogramming.com',
+    })
+  ) {
     console.log('Demo seed skipped: demo data already exists.');
     await dataSource.destroy();
     return;
@@ -59,7 +63,7 @@ async function seed(): Promise<void> {
     employeeRepo.create({
       firstName: 'Admin',
       lastName: 'User',
-      email: 'admin@example.com',
+      email: 'admin@ministryofprogramming.com',
       password: passwordHash,
       role: EmployeeRole.ADMIN,
       accountStatus: AccountStatus.ACTIVE,
@@ -70,7 +74,7 @@ async function seed(): Promise<void> {
     employeeRepo.create({
       firstName: 'Pat',
       lastName: 'Procurement',
-      email: 'pat.procurement@example.com',
+      email: 'pat.procurement@ministryofprogramming.com',
       password: passwordHash,
       role: EmployeeRole.PROCUREMENT_MANAGER,
       accountStatus: AccountStatus.ACTIVE,
@@ -81,7 +85,7 @@ async function seed(): Promise<void> {
     employeeRepo.create({
       firstName: 'Bob',
       lastName: 'Manager',
-      email: 'bob.manager@example.com',
+      email: 'bob.manager@ministryofprogramming.com',
       password: passwordHash,
       role: EmployeeRole.DIRECT_MANAGER,
       accountStatus: AccountStatus.ACTIVE,
@@ -110,7 +114,7 @@ async function seed(): Promise<void> {
     employeeRepo.create({
       firstName: 'Jane',
       lastName: 'Doe',
-      email: 'jane.doe@example.com',
+      email: 'jane.doe@ministryofprogramming.com',
       password: passwordHash,
       role: EmployeeRole.EMPLOYEE,
       accountStatus: AccountStatus.ACTIVE,
@@ -122,7 +126,7 @@ async function seed(): Promise<void> {
     employeeRepo.create({
       firstName: 'John',
       lastName: 'Smith',
-      email: 'john.smith@example.com',
+      email: 'john.smith@ministryofprogramming.com',
       password: passwordHash,
       role: EmployeeRole.EMPLOYEE,
       accountStatus: AccountStatus.ACTIVE,
@@ -318,7 +322,7 @@ async function seed(): Promise<void> {
   console.log('Seed completed successfully.');
   console.log(`Password for all users: ${DEMO_PASSWORD}`);
   console.log(
-    'Users: admin@example.com, pat.procurement@example.com, bob.manager@example.com, jane.doe@example.com, john.smith@example.com',
+    'Users: admin@ministryofprogramming.com, pat.procurement@ministryofprogramming.com, bob.manager@ministryofprogramming.com, jane.doe@ministryofprogramming.com, john.smith@ministryofprogramming.com',
   );
   console.log(
     `Departments: ${engineering.name}, ${design.name}, ${operations.name}`,
