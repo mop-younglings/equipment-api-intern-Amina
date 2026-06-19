@@ -28,7 +28,7 @@ import { RequestModule } from './modules/request/request.module';
     ThrottlerModule.forRoot([
       {
         ttl: 60_000,
-        limit: 10,
+        limit: process.env.NODE_ENV === 'test' ? 10_000 : 10,
       },
     ]),
     TypeOrmModule.forRootAsync({

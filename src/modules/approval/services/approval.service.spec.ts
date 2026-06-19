@@ -29,6 +29,7 @@ describe('ApprovalService', () => {
   let service: ApprovalService;
   let approvalStepRepository: jest.Mocked<Repository<ApprovalStep>>;
   let requestRepository: jest.Mocked<Repository<EquipmentRequest>>;
+  let assignmentRepository: jest.Mocked<Repository<EquipmentAssignment>>;
   let notificationService: jest.Mocked<NotificationService>;
   let accessControl: jest.Mocked<AccessControlService>;
   let dataSource: { transaction: jest.Mock };
@@ -108,7 +109,7 @@ describe('ApprovalService', () => {
         },
         {
           provide: getRepositoryToken(EquipmentAssignment),
-          useValue: { create: jest.fn(), save: jest.fn() },
+          useValue: { create: jest.fn(), save: jest.fn(), findOne: jest.fn() },
         },
         { provide: DataSource, useValue: dataSource },
         {
@@ -135,6 +136,7 @@ describe('ApprovalService', () => {
     service = module.get(ApprovalService);
     approvalStepRepository = module.get(getRepositoryToken(ApprovalStep));
     requestRepository = module.get(getRepositoryToken(EquipmentRequest));
+    assignmentRepository = module.get(getRepositoryToken(EquipmentAssignment));
     notificationService = module.get(NotificationService);
     accessControl = module.get(AccessControlService);
   });
@@ -296,9 +298,11 @@ describe('ApprovalService', () => {
         id: requestId,
         requester,
         equipmentModel,
+        requestType: RequestType.LOAN,
         status: RequestStatus.FULFILLED,
         approvalSteps: [updatedStep],
       } as EquipmentRequest);
+      assignmentRepository.findOne.mockResolvedValue(savedAssignment);
 
       const result = await service.approve(stepId, procurementUser, {});
 

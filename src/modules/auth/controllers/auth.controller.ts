@@ -39,6 +39,7 @@ export class AuthController {
   }
 
   @Post('login')
+  @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AuthTokenResponseDto })
   @ApiOperation({
     summary: 'Authenticate and receive tokens',
@@ -50,6 +51,7 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AuthTokenResponseDto })
   @ApiUnauthorizedResponse({ description: 'Invalid or expired refresh token' })
   @ApiOperation({

@@ -311,15 +311,9 @@ export class ApprovalService {
       expectedReturnDate: request.endDate,
       status: EquipmentAssignmentStatus.ACTIVE,
     });
-    const savedAssignment = await assignmentRepo.save(assignment);
+    await assignmentRepo.save(assignment);
 
     await requestRepo.update(request.id, { status: RequestStatus.FULFILLED });
-
-    await this.notificationService.notifyEquipmentAssigned(
-      request.requester,
-      request,
-      savedAssignment,
-    );
   }
 
   private async dispatchNotifications(
@@ -372,6 +366,30 @@ export class ApprovalService {
 
     if (request.requestType === RequestType.PROCUREMENT) {
       await this.notificationService.notifyProcurementApproved(
+        request.requester,
+        request,
+      );
+      return;
+    }
+
+    if (
+      request.requestType === RequestType.LOAN &&
+      request.status === RequestStatus.FULFILLED
+    ) {
+      const assignment = await this.assignmentRepository.findOne({
+        where: { request: { id: request.id } },
+        relations: { equipmentAsset: { equipmentModel: true } },
+      });
+
+      if (assignment) {
+        await this.notificationService.notifyEquipmentAssigned(
+          request.requester,
+          request,
+          assignment,
+        );
+      }
+
+      await this.notificationService.notifyRequestApproved(
         request.requester,
         request,
       );
