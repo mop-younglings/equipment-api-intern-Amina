@@ -2,7 +2,11 @@
 
 Entity-relationship diagram for the PostgreSQL schema managed by TypeORM migrations.
 
-## Entity relationship diagram
+## Entity relationship diagrams
+
+The schema is split into two domains. **`refresh_tokens` belongs to auth only** — it links to `employees`, not to any equipment table.
+
+### Auth & organisation
 
 ```mermaid
 erDiagram
@@ -34,6 +38,21 @@ erDiagram
         timestamp expires_at
         timestamp revoked_at
         timestamp created_at
+    }
+
+    departments ||--o{ employees : department_id
+    employees ||--o| departments : direct_manager_id
+    employees ||--o{ refresh_tokens : employee_id
+```
+
+### Equipment & workflow
+
+```mermaid
+erDiagram
+    employees {
+        uuid id PK
+        string email UK
+        enum role
     }
 
     equipment_categories {
@@ -140,9 +159,6 @@ erDiagram
         timestamp updated_at
     }
 
-    departments ||--o{ employees : department_id
-    employees ||--o| departments : direct_manager_id
-    employees ||--o{ refresh_tokens : employee_id
     equipment_categories ||--o{ equipment_models : category_id
     equipment_models ||--o{ equipment_assets : equipment_model_id
     employees ||--o{ equipment_assets : assigned_employee_id
@@ -189,20 +205,27 @@ stateDiagram-v2
 
 ## Tables
 
-11 tables in the current schema:
+11 tables in the current schema, grouped by domain:
 
-| Table                   | Description                                            |
-| ----------------------- | ------------------------------------------------------ |
-| `departments`           | Org units; each may have one `direct_manager_id`       |
-| `employees`             | Users, roles, department membership, account status    |
-| `refresh_tokens`        | Opaque refresh sessions (hashed token, expiry, revoke) |
-| `equipment_categories`  | High-level groupings (Laptop, Monitor, …)              |
-| `equipment_models`      | Product types within a category                        |
-| `equipment_assets`      | Physical inventory items                               |
-| `equipment_assignments` | Assignment and return history                          |
-| `equipment_requests`    | Loan and procurement requests                          |
-| `approval_steps`        | Manager and procurement approval records               |
-| `notifications`         | Workflow notifications                                 |
+### Auth & organisation
+
+| Table            | Description                                            |
+| ---------------- | ------------------------------------------------------ |
+| `departments`    | Org units; each may have one `direct_manager_id`       |
+| `employees`      | Users, roles, department membership, account status    |
+| `refresh_tokens` | Login sessions only — FK to `employees`, not equipment |
+
+### Equipment & workflow
+
+| Table                   | Description                               |
+| ----------------------- | ----------------------------------------- |
+| `equipment_categories`  | High-level groupings (Laptop, Monitor, …) |
+| `equipment_models`      | Product types within a category           |
+| `equipment_assets`      | Physical inventory items                  |
+| `equipment_assignments` | Assignment and return history             |
+| `equipment_requests`    | Loan and procurement requests             |
+| `approval_steps`        | Manager and procurement approval records  |
+| `notifications`         | Workflow notifications                    |
 
 ## Key enums
 
@@ -218,12 +241,14 @@ stateDiagram-v2
 | `equipment_assignments.status`    | `active`, `return_requested`, `returned`, `cancelled`                                                                                                                                                |
 | `notifications.type`              | `approval_required`, `request_approved`, `request_rejected`, `request_cancelled`, `request_update`, `procurement_approved`, `equipment_assigned`, `equipment_return_requested`, `equipment_returned` |
 
-## Auth tokens (not in ERD as JWT)
+## Auth tokens
 
 | Token             | Storage                                                                        | Lifetime                              | Purpose                                                                |
 | ----------------- | ------------------------------------------------------------------------------ | ------------------------------------- | ---------------------------------------------------------------------- |
-| **Access token**  | Client only (JWT, signed with `JWT_SECRET`)                                    | `JWT_EXPIRES_IN` (default 1d)         | Sent on every API request (`Authorization: Bearer …`)                  |
+| **Access token**  | Client only (JWT, signed with `JWT_SECRET`) — **not stored in the database**   | `JWT_EXPIRES_IN` (default 1d)         | Sent on every API request (`Authorization: Bearer …`)                  |
 | **Refresh token** | Client holds opaque string; server stores **SHA-256 hash** in `refresh_tokens` | `JWT_REFRESH_EXPIRES_IN` (default 7d) | Used only to obtain a new access/refresh pair via `POST /auth/refresh` |
+
+`refresh_tokens` is part of the **auth domain** (see diagram above). It tracks who is logged in via `employee_id` only. Equipment endpoints never read or write this table — they only validate the access JWT.
 
 On refresh, the old row is revoked (`revoked_at` set) and a new token is issued (rotation). Logout and admin actions (password reset, deactivate) revoke session(s) in the database.
 
