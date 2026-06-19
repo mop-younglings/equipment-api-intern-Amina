@@ -8,6 +8,8 @@ describe('AuthController', () => {
   const authService = {
     register: jest.fn(),
     login: jest.fn(),
+    refresh: jest.fn(),
+    logout: jest.fn(),
     getProfile: jest.fn(),
   };
 

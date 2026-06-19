@@ -14,6 +14,7 @@ import { AccountStatus } from '../../employee/enums/account-status.enum';
 import { EmployeeRole } from '../../employee/enums/employee-role.enum';
 import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
+import { RefreshTokenService } from './refresh-token.service';
 
 export interface JwtPayload {
   sub: string;
@@ -23,6 +24,7 @@ export interface JwtPayload {
 
 export interface AuthTokenResponse {
   accessToken: string;
+  refreshToken: string;
 }
 
 @Injectable()
@@ -35,6 +37,7 @@ export class AuthService {
     @InjectRepository(Department)
     private readonly departmentRepository: Repository<Department>,
     private readonly jwtService: JwtService,
+    private readonly refreshTokenService: RefreshTokenService,
   ) {}
 
   async register(
@@ -102,12 +105,34 @@ export class AuthService {
     return this.toPublicEmployee(employee);
   }
 
-  private toPublicEmployee(employee: Employee): Omit<Employee, 'password'> {
-    const { password: _password, ...publicEmployee } = employee;
-    return publicEmployee;
+  async login(loginDto: LoginDto): Promise<AuthTokenResponse> {
+    const employee = await this.authenticateCredentials(loginDto);
+    return this.issueTokenPair(employee);
   }
 
-  async login(loginDto: LoginDto): Promise<AuthTokenResponse> {
+  async refresh(refreshToken: string): Promise<AuthTokenResponse> {
+    const storedToken =
+      await this.refreshTokenService.validateToken(refreshToken);
+    const employee = storedToken.employee;
+
+    if (employee.accountStatus !== AccountStatus.ACTIVE) {
+      await this.refreshTokenService.revokeToken(refreshToken);
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    await this.refreshTokenService.revokeToken(refreshToken);
+    return this.issueTokenPair(employee);
+  }
+
+  async logout(refreshToken: string): Promise<void> {
+    await this.refreshTokenService.revokeToken(refreshToken);
+  }
+
+  async revokeAllSessions(employeeId: string): Promise<void> {
+    await this.refreshTokenService.revokeAllForEmployee(employeeId);
+  }
+
+  private async authenticateCredentials(loginDto: LoginDto): Promise<Employee> {
     const employee = await this.employeeRepository.findOne({
       where: { email: loginDto.email },
       select: {
@@ -132,14 +157,26 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
+    return employee;
+  }
+
+  private async issueTokenPair(employee: Employee): Promise<AuthTokenResponse> {
     const payload: JwtPayload = {
       sub: employee.id,
       email: employee.email,
       role: employee.role,
     };
 
-    return {
-      accessToken: await this.jwtService.signAsync(payload),
-    };
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(payload),
+      this.refreshTokenService.issueForEmployee(employee),
+    ]);
+
+    return { accessToken, refreshToken };
+  }
+
+  private toPublicEmployee(employee: Employee): Omit<Employee, 'password'> {
+    const { password: _password, ...publicEmployee } = employee;
+    return publicEmployee;
   }
 }

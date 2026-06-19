@@ -11,6 +11,7 @@ import { EmployeeRole } from '../../employee/enums/employee-role.enum';
 import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
 import { AuthService, JwtPayload } from './auth.service';
+import { RefreshTokenService } from './refresh-token.service';
 
 jest.mock('bcrypt');
 
@@ -19,6 +20,7 @@ describe('AuthService', () => {
   let employeeRepository: jest.Mocked<Repository<Employee>>;
   let departmentRepository: jest.Mocked<Repository<Department>>;
   let jwtService: jest.Mocked<JwtService>;
+  let refreshTokenService: jest.Mocked<RefreshTokenService>;
 
   const employeeId = '550e8400-e29b-41d4-a716-446655440000';
   const departmentId = 'dept-1';
@@ -68,6 +70,15 @@ describe('AuthService', () => {
           provide: JwtService,
           useValue: { signAsync: jest.fn() },
         },
+        {
+          provide: RefreshTokenService,
+          useValue: {
+            issueForEmployee: jest.fn(),
+            validateToken: jest.fn(),
+            revokeToken: jest.fn(),
+            revokeAllForEmployee: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -75,6 +86,7 @@ describe('AuthService', () => {
     employeeRepository = module.get(getRepositoryToken(Employee));
     departmentRepository = module.get(getRepositoryToken(Department));
     jwtService = module.get(JwtService);
+    refreshTokenService = module.get(RefreshTokenService);
 
     jest.clearAllMocks();
   });
@@ -119,10 +131,11 @@ describe('AuthService', () => {
   });
 
   describe('login', () => {
-    it('returns a JWT access token for valid credentials', async () => {
+    it('returns access and refresh tokens for valid credentials', async () => {
       employeeRepository.findOne.mockResolvedValue(mockEmployee);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
       jwtService.signAsync.mockResolvedValue('signed-jwt-token');
+      refreshTokenService.issueForEmployee.mockResolvedValue('refresh-token');
 
       const result = await service.login(loginDto);
 
@@ -131,7 +144,13 @@ describe('AuthService', () => {
         email: mockEmployee.email,
         role: mockEmployee.role,
       });
-      expect(result).toEqual({ accessToken: 'signed-jwt-token' });
+      expect(refreshTokenService.issueForEmployee).toHaveBeenCalledWith(
+        mockEmployee,
+      );
+      expect(result).toEqual({
+        accessToken: 'signed-jwt-token',
+        refreshToken: 'refresh-token',
+      });
     });
 
     it('throws UnauthorizedException when account is inactive', async () => {
@@ -154,6 +173,55 @@ describe('AuthService', () => {
         UnauthorizedException,
       );
       expect(jwtService.signAsync).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('refresh', () => {
+    it('rotates refresh token and returns a new token pair', async () => {
+      refreshTokenService.validateToken.mockResolvedValue({
+        employee: mockEmployee,
+      } as never);
+      refreshTokenService.revokeToken.mockResolvedValue(undefined);
+      jwtService.signAsync.mockResolvedValue('new-access-token');
+      refreshTokenService.issueForEmployee.mockResolvedValue(
+        'new-refresh-token',
+      );
+
+      const result = await service.refresh('old-refresh-token');
+
+      expect(refreshTokenService.validateToken).toHaveBeenCalledWith(
+        'old-refresh-token',
+      );
+      expect(refreshTokenService.revokeToken).toHaveBeenCalledWith(
+        'old-refresh-token',
+      );
+      expect(result).toEqual({
+        accessToken: 'new-access-token',
+        refreshToken: 'new-refresh-token',
+      });
+    });
+
+    it('revokes refresh token when employee is inactive', async () => {
+      refreshTokenService.validateToken.mockResolvedValue({
+        employee: { ...mockEmployee, accountStatus: AccountStatus.INACTIVE },
+      } as never);
+
+      await expect(service.refresh('old-refresh-token')).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(refreshTokenService.revokeToken).toHaveBeenCalledWith(
+        'old-refresh-token',
+      );
+    });
+  });
+
+  describe('logout', () => {
+    it('revokes the refresh token', async () => {
+      await service.logout('refresh-token');
+
+      expect(refreshTokenService.revokeToken).toHaveBeenCalledWith(
+        'refresh-token',
+      );
     });
   });
 

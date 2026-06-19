@@ -8,6 +8,7 @@ import { Employee } from '../../employee/entities/employee.entity';
 import { AccountStatus } from '../../employee/enums/account-status.enum';
 import { EmployeeRole } from '../../employee/enums/employee-role.enum';
 import { UpdateUserRoleDto, UpdateUserStatusDto } from '../dto/admin.dto';
+import { AuthService } from '../../auth/services/auth.service';
 import { AdminService } from './admin.service';
 
 jest.mock('bcrypt');
@@ -16,6 +17,7 @@ describe('AdminService', () => {
   let service: AdminService;
   let employeeRepository: jest.Mocked<Repository<Employee>>;
   let departmentRepository: jest.Mocked<Repository<Department>>;
+  let authService: jest.Mocked<Pick<AuthService, 'revokeAllSessions'>>;
 
   const userId = 'user-1';
 
@@ -49,12 +51,17 @@ describe('AdminService', () => {
           provide: getRepositoryToken(Department),
           useValue: { findOne: jest.fn() },
         },
+        {
+          provide: AuthService,
+          useValue: { revokeAllSessions: jest.fn() },
+        },
       ],
     }).compile();
 
     service = module.get(AdminService);
     employeeRepository = module.get(getRepositoryToken(Employee));
     departmentRepository = module.get(getRepositoryToken(Department));
+    authService = module.get(AuthService);
     jest.clearAllMocks();
   });
 
@@ -90,6 +97,7 @@ describe('AdminService', () => {
       const result = await service.updateStatus(userId, dto);
 
       expect(result.accountStatus).toBe(AccountStatus.INACTIVE);
+      expect(authService.revokeAllSessions).toHaveBeenCalledWith(userId);
     });
   });
 
@@ -166,6 +174,7 @@ describe('AdminService', () => {
 
       await service.resetPassword(userId, { password: 'newpassword' });
       expect(bcrypt.hash).toHaveBeenCalled();
+      expect(authService.revokeAllSessions).toHaveBeenCalledWith(userId);
     });
 
     it('removes user', async () => {

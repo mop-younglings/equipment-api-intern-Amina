@@ -410,6 +410,45 @@ describe('Equipment workflow (e2e)', () => {
       .expect(401);
   });
 
+  it('rotates refresh tokens and preserves authenticated access', async () => {
+    if (!dbAvailable) return;
+
+    const loginResponse = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: fixtures.employee.email, password: DEMO_PASSWORD })
+      .expect(200);
+
+    expect(loginResponse.body.refreshToken).toBeTruthy();
+
+    const oldRefreshToken = loginResponse.body.refreshToken as string;
+
+    const refreshResponse = await request(app.getHttpServer())
+      .post('/auth/refresh')
+      .send({ refreshToken: oldRefreshToken })
+      .expect(200);
+
+    const newAccessToken = refreshResponse.body.accessToken as string;
+    const newRefreshToken = refreshResponse.body.refreshToken as string;
+
+    expect(newAccessToken).toBeTruthy();
+    expect(newRefreshToken).not.toBe(oldRefreshToken);
+
+    await request(app.getHttpServer())
+      .get('/requests/my')
+      .set('Authorization', `Bearer ${newAccessToken}`)
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .post('/auth/logout')
+      .send({ refreshToken: newRefreshToken })
+      .expect(204);
+
+    await request(app.getHttpServer())
+      .post('/auth/refresh')
+      .send({ refreshToken: newRefreshToken })
+      .expect(401);
+  });
+
   it('enforces role-based access restrictions', async () => {
     if (!dbAvailable) return;
 

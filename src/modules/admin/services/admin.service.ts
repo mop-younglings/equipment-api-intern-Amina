@@ -17,6 +17,7 @@ import {
   UpdateUserRoleDto,
   UpdateUserStatusDto,
 } from '../dto/admin.dto';
+import { AuthService } from '../../auth/services/auth.service';
 
 @Injectable()
 export class AdminService {
@@ -27,6 +28,7 @@ export class AdminService {
     private readonly employeeRepository: Repository<Employee>,
     @InjectRepository(Department)
     private readonly departmentRepository: Repository<Department>,
+    private readonly authService: AuthService,
   ) {}
 
   findAllUsers(): Promise<Employee[]> {
@@ -110,13 +112,20 @@ export class AdminService {
   async updateStatus(id: string, dto: UpdateUserStatusDto): Promise<Employee> {
     const user = await this.findUser(id);
     user.accountStatus = dto.accountStatus;
-    return this.employeeRepository.save(user);
+    const saved = await this.employeeRepository.save(user);
+
+    if (dto.accountStatus === AccountStatus.INACTIVE) {
+      await this.authService.revokeAllSessions(id);
+    }
+
+    return saved;
   }
 
   async resetPassword(id: string, dto: ResetPasswordDto): Promise<void> {
     const user = await this.findUser(id);
     user.password = await bcrypt.hash(dto.password, this.saltRounds);
     await this.employeeRepository.save(user);
+    await this.authService.revokeAllSessions(id);
   }
 
   async removeUser(id: string): Promise<void> {

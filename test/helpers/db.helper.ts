@@ -33,6 +33,7 @@ export async function cleanDatabase(dataSource: DataSource): Promise<void> {
       "equipment_assets",
       "equipment_models",
       "equipment_categories",
+      "refresh_tokens",
       "employees",
       "departments"
     RESTART IDENTITY CASCADE

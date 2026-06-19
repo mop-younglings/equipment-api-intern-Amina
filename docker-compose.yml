@@ -31,6 +31,7 @@ services:
       DB_NAME: equipment_api
       JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-random-string}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
       PORT: 3000
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
       RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
