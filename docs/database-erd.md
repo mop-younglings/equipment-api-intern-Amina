@@ -27,6 +27,15 @@ erDiagram
         timestamp updated_at
     }
 
+    refresh_tokens {
+        uuid id PK
+        uuid employee_id FK
+        string token_hash UK
+        timestamp expires_at
+        timestamp revoked_at
+        timestamp created_at
+    }
+
     equipment_categories {
         uuid id PK
         string name
@@ -133,6 +142,7 @@ erDiagram
 
     departments ||--o{ employees : department_id
     employees ||--o| departments : direct_manager_id
+    employees ||--o{ refresh_tokens : employee_id
     equipment_categories ||--o{ equipment_models : category_id
     equipment_models ||--o{ equipment_assets : equipment_model_id
     employees ||--o{ equipment_assets : assigned_employee_id
@@ -179,19 +189,20 @@ stateDiagram-v2
 
 ## Tables
 
-10 tables in the current schema:
+11 tables in the current schema:
 
-| Table                   | Description                                         |
-| ----------------------- | --------------------------------------------------- |
-| `departments`           | Org units; each may have one `direct_manager_id`    |
-| `employees`             | Users, roles, department membership, account status |
-| `equipment_categories`  | High-level groupings (Laptop, Monitor, …)           |
-| `equipment_models`      | Product types within a category                     |
-| `equipment_assets`      | Physical inventory items                            |
-| `equipment_assignments` | Assignment and return history                       |
-| `equipment_requests`    | Loan and procurement requests                       |
-| `approval_steps`        | Manager and procurement approval records            |
-| `notifications`         | Workflow notifications                              |
+| Table                   | Description                                            |
+| ----------------------- | ------------------------------------------------------ |
+| `departments`           | Org units; each may have one `direct_manager_id`       |
+| `employees`             | Users, roles, department membership, account status    |
+| `refresh_tokens`        | Opaque refresh sessions (hashed token, expiry, revoke) |
+| `equipment_categories`  | High-level groupings (Laptop, Monitor, …)              |
+| `equipment_models`      | Product types within a category                        |
+| `equipment_assets`      | Physical inventory items                               |
+| `equipment_assignments` | Assignment and return history                          |
+| `equipment_requests`    | Loan and procurement requests                          |
+| `approval_steps`        | Manager and procurement approval records               |
+| `notifications`         | Workflow notifications                                 |
 
 ## Key enums
 
@@ -206,6 +217,15 @@ stateDiagram-v2
 | `approval_steps.status`           | `pending`, `approved`, `rejected`, `skipped`                                                                                                                                                         |
 | `equipment_assignments.status`    | `active`, `return_requested`, `returned`, `cancelled`                                                                                                                                                |
 | `notifications.type`              | `approval_required`, `request_approved`, `request_rejected`, `request_cancelled`, `request_update`, `procurement_approved`, `equipment_assigned`, `equipment_return_requested`, `equipment_returned` |
+
+## Auth tokens (not in ERD as JWT)
+
+| Token             | Storage                                                                        | Lifetime                              | Purpose                                                                |
+| ----------------- | ------------------------------------------------------------------------------ | ------------------------------------- | ---------------------------------------------------------------------- |
+| **Access token**  | Client only (JWT, signed with `JWT_SECRET`)                                    | `JWT_EXPIRES_IN` (default 1d)         | Sent on every API request (`Authorization: Bearer …`)                  |
+| **Refresh token** | Client holds opaque string; server stores **SHA-256 hash** in `refresh_tokens` | `JWT_REFRESH_EXPIRES_IN` (default 7d) | Used only to obtain a new access/refresh pair via `POST /auth/refresh` |
+
+On refresh, the old row is revoked (`revoked_at` set) and a new token is issued (rotation). Logout and admin actions (password reset, deactivate) revoke session(s) in the database.
 
 ## Inspect schema in Docker
 
