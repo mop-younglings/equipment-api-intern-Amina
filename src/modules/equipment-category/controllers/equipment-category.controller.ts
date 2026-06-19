@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { MinRole } from '../../auth/decorators/min-role.decorator';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
@@ -13,6 +13,10 @@ export class EquipmentCategoryController {
   constructor(private readonly categoryService: EquipmentCategoryService) {}
 
   @Get()
+  @ApiOperation({
+    summary: 'List equipment categories',
+    description: 'Returns all equipment categories available in the catalog.',
+  })
   findAll() {
     return this.categoryService.findAll();
   }
@@ -21,6 +25,11 @@ export class EquipmentCategoryController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @MinRole(EmployeeRole.PROCUREMENT_MANAGER)
   @Post()
+  @ApiOperation({
+    summary: 'Create an equipment category',
+    description:
+      'Creates a new equipment category. Procurement manager access required.',
+  })
   create(@Body() dto: CreateEquipmentCategoryDto) {
     return this.categoryService.create(dto);
   }

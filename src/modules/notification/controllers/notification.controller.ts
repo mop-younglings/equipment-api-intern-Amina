@@ -74,7 +74,11 @@ export class NotificationController {
   }
 
   @Patch(':id/read')
-  @ApiOperation({ summary: 'Mark a notification as read' })
+  @ApiOperation({
+    summary: 'Mark a notification as read',
+    description:
+      'Marks a single notification as read for the authenticated user.',
+  })
   @ApiParam({
     name: 'id',
     example: '550e8400-e29b-41d4-a716-446655440000',
