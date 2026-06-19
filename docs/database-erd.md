@@ -245,7 +245,7 @@ stateDiagram-v2
 
 | Token             | Storage                                                                        | Lifetime                              | Purpose                                                                |
 | ----------------- | ------------------------------------------------------------------------------ | ------------------------------------- | ---------------------------------------------------------------------- |
-| **Access token**  | Client only (JWT, signed with `JWT_SECRET`) — **not stored in the database**   | `JWT_EXPIRES_IN` (default 1d)         | Sent on every API request (`Authorization: Bearer …`)                  |
+| **Access token**  | Client only (JWT, signed with `JWT_SECRET`) — **not stored in the database**   | `JWT_EXPIRES_IN` (default 15m)        | Sent on every API request (`Authorization: Bearer …`)                  |
 | **Refresh token** | Client holds opaque string; server stores **SHA-256 hash** in `refresh_tokens` | `JWT_REFRESH_EXPIRES_IN` (default 7d) | Used only to obtain a new access/refresh pair via `POST /auth/refresh` |
 
 `refresh_tokens` is part of the **auth domain** (see diagram above). It tracks who is logged in via `employee_id` only. Equipment endpoints never read or write this table — they only validate the access JWT.

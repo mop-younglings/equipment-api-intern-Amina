@@ -87,7 +87,7 @@ variable "jwt_secret" {
 variable "jwt_expires_in" {
   description = "JWT token expiration (passed to the app as JWT_EXPIRES_IN)."
   type        = string
-  default     = "1d"
+  default     = "15m"
 }
 
 variable "cors_origin" {

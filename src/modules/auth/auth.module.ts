@@ -23,7 +23,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
         secret: configService.getOrThrow<string>('auth.jwtSecret'),
         signOptions: {
           expiresIn: (configService.get<string>('auth.jwtExpiresIn') ??
-            '1d') as JwtSignOptions['expiresIn'],
+            '15m') as JwtSignOptions['expiresIn'],
         },
       }),
     }),

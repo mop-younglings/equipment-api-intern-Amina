@@ -56,7 +56,9 @@ describe('RefreshTokenService', () => {
     refreshTokenRepository.create.mockImplementation(
       (data) => data as RefreshToken,
     );
-    refreshTokenRepository.save.mockImplementation(async (record) => record);
+    refreshTokenRepository.save.mockImplementation(
+      async (record) => record as RefreshToken,
+    );
 
     const token = await service.issueForEmployee(employee);
 
