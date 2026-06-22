@@ -1,6 +1,6 @@
 # Equipment Request API
 
-A NestJS REST API for company equipment inventory, loan/procurement requests, multi-level approvals (direct manager → procurement manager), assignments, returns, and notifications.
+A ASP.NET Core REST API for company equipment inventory, loan/procurement requests, multi-level approvals (direct manager → procurement manager), assignments, returns, and notifications.
 
 ## Features
 
@@ -27,47 +27,46 @@ Database schema: [docs/database-erd.md](docs/database-erd.md) (Mermaid ERD, view
 
 ## Tech Stack
 
-| Layer      | Technology            |
-| ---------- | --------------------- |
-| Framework  | NestJS 11             |
-| Language   | TypeScript            |
-| Database   | PostgreSQL 16         |
-| ORM        | TypeORM (migrations)  |
-| Auth       | Passport JWT          |
-| Validation | class-validator       |
-| Security   | Helmet, rate limiting |
-| Testing    | Jest + Supertest      |
-| API docs   | Swagger / OpenAPI     |
+| Layer      | Technology                         |
+| ---------- | ---------------------------------- |
+| Framework  | ASP.NET Core 8                     |
+| Language   | C#                                 |
+| Database   | PostgreSQL 16                      |
+| ORM        | Entity Framework Core              |
+| Auth       | JWT Bearer + bcrypt                |
+| Validation | Data annotations                   |
+| Security   | Rate limiting, CORS                |
+| API docs   | Swagger / OpenAPI                  |
 
 ## Quick Start
 
-### Local development (recommended)
+### Prerequisites
 
-Runs the API on your machine with PostgreSQL in Docker.
+- [.NET 8 SDK](https://dotnet.microsoft.com/download)
+- Docker (for PostgreSQL)
+
+### Local development
 
 ```bash
-npm install
 cp .env.example .env
 docker compose up -d postgres
-npm run migration:run
-npm run seed
-npm run start:dev
+dotnet run --project src/EquipmentApi/EquipmentApi.csproj
+./scripts/seed.sh
 ```
 
-API: `http://localhost:3000` · Swagger: `http://localhost:3000/api`
+API: `http://localhost:3000` · Swagger: `http://localhost:3000/api` · OpenAPI JSON: `http://localhost:3000/api-json`
 
 ### Full Docker stack
 
 Runs PostgreSQL and the API in containers. Migrations run automatically on container start.
 
 ```bash
-npm install
 cp .env.example .env
-npm run docker:up
-npm run seed
+docker compose up -d --build
+./scripts/seed.sh
 ```
 
-Do not run `start:dev` alongside `docker:up` — both bind port 3000.
+Do not run `dotnet run` alongside `docker compose up` for the app service — both bind port 3000.
 
 ### Demo Credentials (password: `password123`)
 
@@ -220,20 +219,13 @@ Authenticated endpoints require `Authorization: Bearer <accessToken>` unless not
 
 ## Security
 
-- **Helmet** — HTTP security headers on all responses
 - **Rate limiting** — 10 requests per 60 seconds per IP (global)
 - **CORS** — Configurable via `CORS_ORIGIN` (default `http://localhost:3000`)
 - **Token lifetimes** — Access tokens default to 15 minutes; refresh tokens to 7 days. Clients should call `POST /auth/refresh` when the access token expires (401). Refresh tokens rotate on each refresh; logout revokes the refresh token.
 
 ## Testing
 
-```bash
-npm test              # Unit tests (≥70% coverage enforced)
-npm run test:cov      # Coverage report
-npm run test:e2e      # Integration/e2e (requires PostgreSQL)
-```
-
-E2E tests cover loan/procurement workflows, cancellations, rejections, returns, asset delete/retire rules, admin actions, RBAC, and notifications.
+Unit and integration tests are not yet ported to xUnit. The previous Jest/Supertest suite can be reimplemented against the same HTTP contract.
 
 ## Environment Variables
 

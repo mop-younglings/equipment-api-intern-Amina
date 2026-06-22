@@ -40,7 +40,7 @@ resource "aws_ecs_task_definition" "app" {
       ]
 
       environment = [
-        { name = "NODE_ENV", value = "production" },
+        { name = "ASPNETCORE_ENVIRONMENT", value = "Production" },
         { name = "PORT", value = tostring(var.app_port) },
         { name = "DB_HOST", value = aws_db_instance.main.address },
         { name = "DB_PORT", value = tostring(aws_db_instance.main.port) },
@@ -72,7 +72,7 @@ resource "aws_ecs_task_definition" "app" {
       }
 
       healthCheck = {
-        command     = ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:${var.app_port}${var.health_check_path}').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+        command     = ["CMD-SHELL", "curl -fsS http://127.0.0.1:${var.app_port}${var.health_check_path} >/dev/null || exit 1"]
         interval    = 30
         timeout     = 5
         retries     = 3
